@@ -75,6 +75,14 @@ func (a *App) handleEscapeKey(currentPageName string) {
 		a.handleNavigation(ui.PageOssObjects, a.ossObjectTable)
 	case ui.PageRdsDetail:
 		a.handleNavigation(ui.PageRdsList, a.rdsInstanceTable)
+	case ui.PageRdsDatabases:
+		a.handleNavigation(ui.PageRdsList, a.rdsInstanceTable)
+	case ui.PageRdsAccounts:
+		a.handleNavigation(ui.PageRdsList, a.rdsInstanceTable)
+	case "rdsDatabaseDetail":
+		a.handleNavigation(ui.PageRdsDatabases, a.rdsDatabaseTable)
+	case "rdsAccountDetail":
+		a.handleNavigation(ui.PageRdsAccounts, a.rdsAccountTable)
 	}
 }
 
@@ -101,6 +109,14 @@ func (a *App) handleBackKey(currentPageName string) {
 		a.handleNavigation(ui.PageOssObjects, a.ossObjectTable)
 	case ui.PageRdsDetail:
 		a.handleNavigation(ui.PageRdsList, a.rdsInstanceTable)
+	case ui.PageRdsDatabases:
+		a.handleNavigation(ui.PageRdsList, a.rdsInstanceTable)
+	case ui.PageRdsAccounts:
+		a.handleNavigation(ui.PageRdsList, a.rdsInstanceTable)
+	case "rdsDatabaseDetail":
+		a.handleNavigation(ui.PageRdsDatabases, a.rdsDatabaseTable)
+	case "rdsAccountDetail":
+		a.handleNavigation(ui.PageRdsAccounts, a.rdsAccountTable)
 	}
 }
 
@@ -439,6 +455,20 @@ func (a *App) setupTableYankFunctionality(table *tview.Table, data interface{}) 
 										break
 									}
 								}
+							case []rds.Database:
+								for _, db := range items {
+									if db.DBName == ref.(string) {
+										rowData = db
+										break
+									}
+								}
+							case []rds.DBInstanceAccount:
+								for _, account := range items {
+									if account.AccountName == ref.(string) {
+										rowData = account
+										break
+									}
+								}
 							}
 						}
 					}
@@ -699,7 +729,156 @@ func (a *App) switchToRdsListView() {
 	// Setup table yank functionality
 	a.setupTableYankFunctionality(a.rdsInstanceTable, a.allRDSInstances)
 
+	// Setup RDS specific key handlers for D (databases) and A (accounts)
+	a.setupRdsKeyHandlers(a.rdsInstanceTable)
+
 	rdsListFlex := ui.WrapTableInFlex(a.rdsInstanceTable)
 	a.pages.AddPage(ui.PageRdsList, rdsListFlex, true, true)
 	a.tviewApp.SetFocus(a.rdsInstanceTable)
+}
+
+// setupRdsKeyHandlers sets up key handlers for RDS specific actions
+func (a *App) setupRdsKeyHandlers(table *tview.Table) {
+	originalInputCapture := table.GetInputCapture()
+
+	table.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Rune() {
+		case 'D': // D key handler for databases
+			row, _ := table.GetSelection()
+			if row > 0 { // Skip header row
+				if cell := table.GetCell(row, 0); cell != nil {
+					if instanceId, ok := cell.GetReference().(string); ok {
+						a.switchToRdsDatabasesView(instanceId)
+					}
+				}
+			}
+			return nil
+		case 'A': // A key handler for accounts
+			row, _ := table.GetSelection()
+			if row > 0 { // Skip header row
+				if cell := table.GetCell(row, 0); cell != nil {
+					if instanceId, ok := cell.GetReference().(string); ok {
+						a.switchToRdsAccountsView(instanceId)
+					}
+				}
+			}
+			return nil
+		}
+
+		// Call original input capture if it exists
+		if originalInputCapture != nil {
+			return originalInputCapture(event)
+		}
+		return event
+	})
+}
+
+// switchToRdsDatabasesView switches to RDS databases view
+func (a *App) switchToRdsDatabasesView(instanceId string) {
+	databases, err := a.services.RDS.FetchDatabases(instanceId)
+	if err != nil {
+		a.showErrorModal(fmt.Sprintf("Failed to fetch databases for instance %s: %v", instanceId, err))
+		return
+	}
+
+	a.currentRdsInstanceId = instanceId
+	a.rdsDatabaseTable = ui.CreateRdsDatabasesListView(databases, instanceId)
+
+	ui.SetupTableNavigation(a.rdsDatabaseTable, func(row, col int) {
+		dbName := a.rdsDatabaseTable.GetCell(row, 0).GetReference().(string)
+		var selectedDatabase interface{}
+		for _, db := range databases {
+			if db.DBName == dbName {
+				selectedDatabase = db
+				break
+			}
+		}
+		a.currentDetailData = selectedDatabase
+		detailView := ui.CreateInteractiveJSONDetailView(
+			fmt.Sprintf("Database Details: %s", dbName),
+			selectedDatabase,
+			a.yankTracker,
+			func() {
+				// Copy callback
+				err := ui.CopyToClipboard(selectedDatabase)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to copy to clipboard: %v", err))
+				} else {
+					a.showErrorModal("Database details copied to clipboard!")
+				}
+			},
+			func() {
+				// Edit callback
+				err := ui.OpenInNvim(selectedDatabase)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to open in nvim: %v", err))
+				}
+			},
+		)
+		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
+		a.pages.AddPage("rdsDatabaseDetail", detailViewWithInstructions, true, true)
+		a.tviewApp.SetFocus(detailView)
+	})
+
+	// Setup table yank functionality
+	a.setupTableYankFunctionality(a.rdsDatabaseTable, databases)
+
+	rdsDatabaseListFlex := ui.WrapTableInFlex(a.rdsDatabaseTable)
+	a.pages.AddPage(ui.PageRdsDatabases, rdsDatabaseListFlex, true, true)
+	a.tviewApp.SetFocus(a.rdsDatabaseTable)
+}
+
+// switchToRdsAccountsView switches to RDS accounts view
+func (a *App) switchToRdsAccountsView(instanceId string) {
+	accounts, err := a.services.RDS.FetchAccounts(instanceId)
+	if err != nil {
+		a.showErrorModal(fmt.Sprintf("Failed to fetch accounts for instance %s: %v", instanceId, err))
+		return
+	}
+
+	a.currentRdsInstanceId = instanceId
+	a.rdsAccountTable = ui.CreateRdsAccountsListView(accounts, instanceId)
+
+	ui.SetupTableNavigation(a.rdsAccountTable, func(row, col int) {
+		accountName := a.rdsAccountTable.GetCell(row, 0).GetReference().(string)
+		var selectedAccount interface{}
+		for _, account := range accounts {
+			if account.AccountName == accountName {
+				selectedAccount = account
+				break
+			}
+		}
+		a.currentDetailData = selectedAccount
+		detailView := ui.CreateInteractiveJSONDetailView(
+			fmt.Sprintf("Account Details: %s", accountName),
+			selectedAccount,
+			a.yankTracker,
+			func() {
+				// Copy callback
+				err := ui.CopyToClipboard(selectedAccount)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to copy to clipboard: %v", err))
+				} else {
+					a.showErrorModal("Account details copied to clipboard!")
+				}
+			},
+			func() {
+				// Edit callback
+				err := ui.OpenInNvim(selectedAccount)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to open in nvim: %v", err))
+				}
+			},
+		)
+		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
+		a.pages.AddPage("rdsAccountDetail", detailViewWithInstructions, true, true)
+		a.tviewApp.SetFocus(detailView)
+	})
+
+	// Setup table yank functionality
+	a.setupTableYankFunctionality(a.rdsAccountTable, accounts)
+
+	rdsAccountListFlex := ui.WrapTableInFlex(a.rdsAccountTable)
+	a.pages.AddPage(ui.PageRdsAccounts, rdsAccountListFlex, true, true)
+	a.tviewApp.SetFocus(a.rdsAccountTable)
 }

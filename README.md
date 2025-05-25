@@ -8,6 +8,11 @@ A Terminal User Interface (TUI) application for managing Alibaba Cloud resources
 - **DNS Management**: Browse AliDNS domains and their DNS records
 - **SLB Instances**: Monitor Server Load Balancer instances and their configurations with JSON details
 - **RDS Instances**: Inspect RDS database instances and their properties with JSON details
+- **RDS Database Management**: 
+  - View databases and accounts for each RDS instance
+  - Press `D` on RDS instance to view databases
+  - Press `A` on RDS instance to view accounts
+  - Full JSON details for databases and accounts
 - **OSS Management**: Browse OSS buckets and objects with pagination and full details
 - **Interactive Features**: 
   - Copy any data as JSON to clipboard with double-y
@@ -130,6 +135,10 @@ The application uses vim-style keyboard navigation:
 - `k` - Move up
 - `Enter` - Select item for detailed view
 
+#### RDS Instance Management
+- `D` - View databases for selected RDS instance
+- `A` - View accounts for selected RDS instance
+
 #### Main Menu Options
 - `1` - View ECS Instances
 - `2` - DNS Management
@@ -169,6 +178,12 @@ The application uses vim-style keyboard navigation:
   - Network configuration
   - Backup and maintenance windows
   - All available metadata
+
+#### RDS Database Management
+- View databases and accounts for each RDS instance
+- Press `D` on RDS instance to view databases
+- Press `A` on RDS instance to view accounts
+- Full JSON details for databases and accounts
 
 #### OSS Management
 - Browse all OSS buckets with name, location, creation date, and storage class

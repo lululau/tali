@@ -37,15 +37,18 @@ type App struct {
 	ossDetailView    *tview.TextView
 	rdsInstanceTable *tview.Table
 	rdsDetailView    *tview.TextView
+	rdsDatabaseTable *tview.Table
+	rdsAccountTable  *tview.Table
 	modeLine         *tview.TextView
 
 	// Data cache
-	allECSInstances   []ecs.Instance
-	allDomains        []alidns.DomainInDescribeDomains
-	allSLBInstances   []slb.LoadBalancer
-	allRDSInstances   []rds.DBInstance
-	allOssBuckets     []oss.BucketProperties
-	currentBucketName string
+	allECSInstances      []ecs.Instance
+	allDomains           []alidns.DomainInDescribeDomains
+	allSLBInstances      []slb.LoadBalancer
+	allRDSInstances      []rds.DBInstance
+	allOssBuckets        []oss.BucketProperties
+	currentBucketName    string
+	currentRdsInstanceId string
 
 	// OSS pagination state
 	ossCurrentMarker   string

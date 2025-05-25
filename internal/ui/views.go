@@ -256,3 +256,79 @@ func CreateRdsDetailView(instance interface{}) *tview.Flex {
 	detailView := CreateJSONDetailView(fmt.Sprintf("RDS Details: %s", rdsInstance.DBInstanceId), instance)
 	return CreateDetailViewWithInstructions(detailView)
 }
+
+// CreateRdsDatabasesListView creates RDS databases list view
+func CreateRdsDatabasesListView(databases []rds.Database, instanceId string) *tview.Table {
+	table := tview.NewTable().
+		SetBorders(true).
+		SetSelectable(true, false)
+	table = SetupTableWithFixedWidth(table)
+
+	headers := []string{"Database Name", "Status", "Character Set", "Bound Accounts", "Description"}
+	CreateTableHeaders(table, headers)
+
+	if len(databases) == 0 {
+		table.SetCell(1, 0, tview.NewTableCell("No databases found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
+	} else {
+		for r, db := range databases {
+			// Format bound accounts
+			boundAccounts := ""
+			if len(db.Accounts.AccountPrivilegeInfo) > 0 {
+				for i, account := range db.Accounts.AccountPrivilegeInfo {
+					if i > 0 {
+						boundAccounts += ", "
+					}
+					boundAccounts += account.Account
+				}
+			} else {
+				boundAccounts = "--"
+			}
+
+			table.SetCell(r+1, 0, tview.NewTableCell(db.DBName).SetTextColor(tcell.ColorWhite).SetReference(db.DBName).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(db.DBStatus).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(db.CharacterSetName).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 3, tview.NewTableCell(boundAccounts).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 4, tview.NewTableCell(db.DBDescription).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+		}
+	}
+	table.SetTitle(fmt.Sprintf("Databases for RDS Instance: %s", instanceId)).SetBorder(true)
+	return table
+}
+
+// CreateRdsAccountsListView creates RDS accounts list view
+func CreateRdsAccountsListView(accounts []rds.DBInstanceAccount, instanceId string) *tview.Table {
+	table := tview.NewTable().
+		SetBorders(true).
+		SetSelectable(true, false)
+	table = SetupTableWithFixedWidth(table)
+
+	headers := []string{"Account Name", "Type", "Status", "Bound Databases", "Description"}
+	CreateTableHeaders(table, headers)
+
+	if len(accounts) == 0 {
+		table.SetCell(1, 0, tview.NewTableCell("No accounts found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
+	} else {
+		for r, account := range accounts {
+			// Format bound databases
+			boundDatabases := ""
+			if len(account.DatabasePrivileges.DatabasePrivilege) > 0 {
+				for i, dbPriv := range account.DatabasePrivileges.DatabasePrivilege {
+					if i > 0 {
+						boundDatabases += ", "
+					}
+					boundDatabases += fmt.Sprintf("%s(%s)", dbPriv.DBName, dbPriv.AccountPrivilege)
+				}
+			} else {
+				boundDatabases = "--"
+			}
+
+			table.SetCell(r+1, 0, tview.NewTableCell(account.AccountName).SetTextColor(tcell.ColorWhite).SetReference(account.AccountName).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(account.AccountType).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(account.AccountStatus).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 3, tview.NewTableCell(boundDatabases).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 4, tview.NewTableCell(account.AccountDescription).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+		}
+	}
+	table.SetTitle(fmt.Sprintf("Accounts for RDS Instance: %s", instanceId)).SetBorder(true)
+	return table
+}

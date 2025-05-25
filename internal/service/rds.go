@@ -53,3 +53,31 @@ func (s *RDSService) FetchInstances() ([]rds.DBInstance, error) {
 
 	return allInstances, nil
 }
+
+// FetchDatabases retrieves all databases for a specific RDS instance
+func (s *RDSService) FetchDatabases(dbInstanceId string) ([]rds.Database, error) {
+	request := rds.CreateDescribeDatabasesRequest()
+	request.Scheme = "https"
+	request.DBInstanceId = dbInstanceId
+
+	response, err := s.client.DescribeDatabases(request)
+	if err != nil {
+		return nil, fmt.Errorf("describing databases for instance %s: %w", dbInstanceId, err)
+	}
+
+	return response.Databases.Database, nil
+}
+
+// FetchAccounts retrieves all accounts for a specific RDS instance
+func (s *RDSService) FetchAccounts(dbInstanceId string) ([]rds.DBInstanceAccount, error) {
+	request := rds.CreateDescribeAccountsRequest()
+	request.Scheme = "https"
+	request.DBInstanceId = dbInstanceId
+
+	response, err := s.client.DescribeAccounts(request)
+	if err != nil {
+		return nil, fmt.Errorf("describing accounts for instance %s: %w", dbInstanceId, err)
+	}
+
+	return response.Accounts.DBInstanceAccount, nil
+}
