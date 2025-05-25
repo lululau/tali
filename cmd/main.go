@@ -181,7 +181,30 @@ func createMainMenu() *tview.List {
 			switchToRdsListView()
 		}).
 		AddItem("Quit", "Exit the application (Press 'Q')", 'Q', func() { app.Stop() })
-	list.SetBorder(true).SetTitle("Main Menu")
+	list.SetBorder(true).SetTitle("Main Menu").SetBackgroundColor(tcell.ColorDefault)
+
+	// Add j/k navigation support for main menu
+	list.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Rune() {
+		case 'j':
+			// Move down
+			currentItem := list.GetCurrentItem()
+			itemCount := list.GetItemCount()
+			if currentItem < itemCount-1 {
+				list.SetCurrentItem(currentItem + 1)
+			}
+			return nil
+		case 'k':
+			// Move up
+			currentItem := list.GetCurrentItem()
+			if currentItem > 0 {
+				list.SetCurrentItem(currentItem - 1)
+			}
+			return nil
+		}
+		return event
+	})
+
 	return list
 }
 
@@ -196,7 +219,7 @@ func createJSONDetailView(title string, data interface{}) *tview.TextView {
 		SetText(string(jsonData)).
 		SetScrollable(true).
 		SetWrap(false)
-	textView.SetBorder(true).SetTitle(title)
+	textView.SetBorder(true).SetTitle(title).SetBackgroundColor(tcell.ColorDefault)
 
 	return textView
 }
@@ -205,7 +228,7 @@ func createJSONDetailView(title string, data interface{}) *tview.TextView {
 func setupTableWithFixedWidth(table *tview.Table) *tview.Table {
 	table.SetFixed(1, 0) // Fix header row, allow all columns to be flexible
 	table.SetSelectable(true, false)
-	table.SetBorder(true)
+	table.SetBorder(true).SetBackgroundColor(tcell.ColorDefault)
 	return table
 }
 
@@ -224,7 +247,7 @@ func wrapTableInFlex(table *tview.Table) tview.Primitive {
 	// Create a flex container that forces the table to use full width
 	flex := tview.NewFlex().SetDirection(tview.FlexRow)
 	flex.AddItem(table, 0, 1, true)
-	flex.SetBorder(false)
+	flex.SetBorder(false).SetBackgroundColor(tcell.ColorDefault)
 	return flex
 }
 
@@ -280,11 +303,13 @@ func createEcsDetailView(instance ecs.Instance) *tview.Flex {
 	instructions := tview.NewTextView().
 		SetText("Press 'Esc' or 'q' to go back, 'Q' to quit").
 		SetTextAlign(tview.AlignCenter).
-		SetDynamicColors(true)
+		SetDynamicColors(true).
+		SetBackgroundColor(tcell.ColorDefault)
 	instructions.SetBorder(false)
 
 	flex.AddItem(instructions, 1, 0, false)
 	flex.AddItem(ecsDetailView, 0, 1, true)
+	flex.SetBackgroundColor(tcell.ColorDefault)
 
 	return flex
 }
@@ -360,11 +385,13 @@ func createSlbDetailView(lb slb.LoadBalancer) *tview.Flex {
 	instructions := tview.NewTextView().
 		SetText("Press 'Esc' or 'q' to go back, 'Q' to quit").
 		SetTextAlign(tview.AlignCenter).
-		SetDynamicColors(true)
+		SetDynamicColors(true).
+		SetBackgroundColor(tcell.ColorDefault)
 	instructions.SetBorder(false)
 
 	flex.AddItem(instructions, 1, 0, false)
 	flex.AddItem(slbDetailView, 0, 1, true)
+	flex.SetBackgroundColor(tcell.ColorDefault)
 
 	return flex
 }
@@ -446,11 +473,13 @@ func createRdsDetailView(instance rds.DBInstance) *tview.Flex {
 	instructions := tview.NewTextView().
 		SetText("Press 'Esc' or 'q' to go back, 'Q' to quit").
 		SetTextAlign(tview.AlignCenter).
-		SetDynamicColors(true)
+		SetDynamicColors(true).
+		SetBackgroundColor(tcell.ColorDefault)
 	instructions.SetBorder(false)
 
 	flex.AddItem(instructions, 1, 0, false)
 	flex.AddItem(rdsDetailView, 0, 1, true)
+	flex.SetBackgroundColor(tcell.ColorDefault)
 
 	return flex
 }
@@ -649,6 +678,7 @@ func setupTableNavigation(table *tview.Table, onSelect func(row, column int)) {
 // Error Modal
 func showErrorModal(message string) {
 	modal := tview.NewModal().SetText(message).AddButtons([]string{"OK"}).
+		SetBackgroundColor(tcell.ColorDefault).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			pages.RemovePage("errorModal")
 			// Try to focus the current page's main element or fallback to main menu
@@ -676,6 +706,7 @@ func main() {
 
 	app = tview.NewApplication()
 	pages = tview.NewPages()
+	pages.SetBackgroundColor(tcell.ColorDefault)
 
 	mainMenu = createMainMenu()
 	pages.AddPage(pageMainMenu, mainMenu, true, true)
@@ -732,9 +763,12 @@ func main() {
 				return nil
 			} else if event.Rune() == 'q' { // lowercase q goes back
 				switch currentPageName {
-				case pageMainMenu, pageEcsList, pageDnsDomains, pageSlbList, pageOssBuckets, pageRdsList:
-					// On main pages, q does nothing (only Q exits)
+				case pageMainMenu:
+					// On main menu, q does nothing (only Q exits)
 					return nil
+				case pageEcsList, pageDnsDomains, pageSlbList, pageOssBuckets, pageRdsList:
+					// On list pages, q goes back to main menu
+					handleNavigation(pageMainMenu, mainMenu)
 				case pageEcsDetail:
 					handleNavigation(pageEcsList, ecsInstanceTable)
 				case pageDnsRecords:
