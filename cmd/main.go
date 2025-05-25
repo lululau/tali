@@ -201,10 +201,31 @@ func createJSONDetailView(title string, data interface{}) *tview.TextView {
 	return textView
 }
 
-// Generic helper for setting up table with fixed width
+// Generic helper for setting up table with full width
 func setupTableWithFixedWidth(table *tview.Table) *tview.Table {
 	table.SetFixed(1, 0) // Fix header row, allow all columns to be flexible
+	table.SetSelectable(true, false)
+	table.SetBorder(true)
 	return table
+}
+
+// Generic helper for creating table headers with expansion
+func createTableHeaders(table *tview.Table, headers []string) {
+	for c, header := range headers {
+		cell := tview.NewTableCell(header).SetTextColor(tcell.ColorYellow).SetAlign(tview.AlignCenter).SetSelectable(false)
+		// Set all columns to expand proportionally
+		cell.SetExpansion(1)
+		table.SetCell(0, c, cell)
+	}
+}
+
+// Generic helper for wrapping table in full-width flex container
+func wrapTableInFlex(table *tview.Table) tview.Primitive {
+	// Create a flex container that forces the table to use full width
+	flex := tview.NewFlex().SetDirection(tview.FlexRow)
+	flex.AddItem(table, 0, 1, true)
+	flex.SetBorder(false)
+	return flex
 }
 
 // ECS List View with enhanced information
@@ -214,9 +235,7 @@ func createEcsListView(instances []ecs.Instance) *tview.Table {
 		SetSelectable(true, false)
 	table = setupTableWithFixedWidth(table)
 	headers := []string{"Instance ID", "Status", "Zone", "CPU/RAM", "Private IP", "Public IP", "Name"}
-	for c, header := range headers {
-		table.SetCell(0, c, tview.NewTableCell(header).SetTextColor(tcell.ColorYellow).SetAlign(tview.AlignCenter).SetSelectable(false))
-	}
+	createTableHeaders(table, headers)
 	if len(instances) == 0 {
 		table.SetCell(1, 0, tview.NewTableCell("No ECS instances found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
 	} else {
@@ -238,13 +257,13 @@ func createEcsListView(instances []ecs.Instance) *tview.Table {
 			// CPU/RAM configuration
 			cpuRam := fmt.Sprintf("%dC/%dG", instance.Cpu, instance.Memory/1024)
 
-			table.SetCell(r+1, 0, tview.NewTableCell(instance.InstanceId).SetTextColor(tcell.ColorWhite).SetReference(instance.InstanceId))
-			table.SetCell(r+1, 1, tview.NewTableCell(instance.Status).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 2, tview.NewTableCell(instance.ZoneId).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 3, tview.NewTableCell(cpuRam).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 4, tview.NewTableCell(privateIP).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 5, tview.NewTableCell(publicIP).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 6, tview.NewTableCell(instance.InstanceName).SetTextColor(tcell.ColorWhite))
+			table.SetCell(r+1, 0, tview.NewTableCell(instance.InstanceId).SetTextColor(tcell.ColorWhite).SetReference(instance.InstanceId).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(instance.Status).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(instance.ZoneId).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 3, tview.NewTableCell(cpuRam).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 4, tview.NewTableCell(privateIP).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 5, tview.NewTableCell(publicIP).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 6, tview.NewTableCell(instance.InstanceName).SetTextColor(tcell.ColorWhite).SetExpansion(1))
 		}
 	}
 	return table
@@ -275,16 +294,14 @@ func createDnsDomainsListView(domains []alidns.DomainInDescribeDomains) *tview.T
 	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)
 	table = setupTableWithFixedWidth(table)
 	headers := []string{"Domain Name", "Record Count", "Version Code"}
-	for c, header := range headers {
-		table.SetCell(0, c, tview.NewTableCell(header).SetTextColor(tcell.ColorYellow).SetAlign(tview.AlignCenter).SetSelectable(false))
-	}
+	createTableHeaders(table, headers)
 	if len(domains) == 0 {
 		table.SetCell(1, 0, tview.NewTableCell("No domains found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
 	} else {
 		for r, domain := range domains {
-			table.SetCell(r+1, 0, tview.NewTableCell(domain.DomainName).SetTextColor(tcell.ColorWhite).SetReference(domain.DomainName))
-			table.SetCell(r+1, 1, tview.NewTableCell(fmt.Sprintf("%d", domain.RecordCount)).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 2, tview.NewTableCell(domain.VersionCode).SetTextColor(tcell.ColorWhite))
+			table.SetCell(r+1, 0, tview.NewTableCell(domain.DomainName).SetTextColor(tcell.ColorWhite).SetReference(domain.DomainName).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(fmt.Sprintf("%d", domain.RecordCount)).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(domain.VersionCode).SetTextColor(tcell.ColorWhite).SetExpansion(1))
 		}
 	}
 	return table
@@ -295,19 +312,17 @@ func createDnsRecordsListView(records []alidns.Record, domainName string) *tview
 	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)
 	table = setupTableWithFixedWidth(table)
 	headers := []string{"Record ID", "RR", "Type", "Value", "TTL", "Status"}
-	for c, header := range headers {
-		table.SetCell(0, c, tview.NewTableCell(header).SetTextColor(tcell.ColorYellow).SetAlign(tview.AlignCenter).SetSelectable(false))
-	}
+	createTableHeaders(table, headers)
 	if len(records) == 0 {
 		table.SetCell(1, 0, tview.NewTableCell("No DNS records found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
 	} else {
 		for r, record := range records {
-			table.SetCell(r+1, 0, tview.NewTableCell(record.RecordId).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 1, tview.NewTableCell(record.RR).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 2, tview.NewTableCell(record.Type).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 3, tview.NewTableCell(record.Value).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 4, tview.NewTableCell(fmt.Sprintf("%d", record.TTL)).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 5, tview.NewTableCell(record.Status).SetTextColor(tcell.ColorWhite))
+			table.SetCell(r+1, 0, tview.NewTableCell(record.RecordId).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(record.RR).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(record.Type).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 3, tview.NewTableCell(record.Value).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 4, tview.NewTableCell(fmt.Sprintf("%d", record.TTL)).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 5, tview.NewTableCell(record.Status).SetTextColor(tcell.ColorWhite).SetExpansion(1))
 		}
 	}
 	table.SetTitle(fmt.Sprintf("DNS Records for %s", domainName)).SetBorder(true)
@@ -319,18 +334,16 @@ func createSlbListView(slbs []slb.LoadBalancer) *tview.Table {
 	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)
 	table = setupTableWithFixedWidth(table)
 	headers := []string{"SLB ID", "Name", "IP Address", "Type", "Status"}
-	for c, header := range headers {
-		table.SetCell(0, c, tview.NewTableCell(header).SetTextColor(tcell.ColorYellow).SetAlign(tview.AlignCenter).SetSelectable(false))
-	}
+	createTableHeaders(table, headers)
 	if len(slbs) == 0 {
 		table.SetCell(1, 0, tview.NewTableCell("No SLB instances found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
 	} else {
 		for r, lb := range slbs {
-			table.SetCell(r+1, 0, tview.NewTableCell(lb.LoadBalancerId).SetTextColor(tcell.ColorWhite).SetReference(lb.LoadBalancerId))
-			table.SetCell(r+1, 1, tview.NewTableCell(lb.LoadBalancerName).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 2, tview.NewTableCell(lb.Address).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 3, tview.NewTableCell(lb.LoadBalancerSpec).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 4, tview.NewTableCell(lb.LoadBalancerStatus).SetTextColor(tcell.ColorWhite))
+			table.SetCell(r+1, 0, tview.NewTableCell(lb.LoadBalancerId).SetTextColor(tcell.ColorWhite).SetReference(lb.LoadBalancerId).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(lb.LoadBalancerName).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(lb.Address).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 3, tview.NewTableCell(lb.LoadBalancerSpec).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 4, tview.NewTableCell(lb.LoadBalancerStatus).SetTextColor(tcell.ColorWhite).SetExpansion(1))
 		}
 	}
 	return table
@@ -361,17 +374,15 @@ func createOssBucketListView(buckets []oss.BucketProperties) *tview.Table {
 	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)
 	table = setupTableWithFixedWidth(table)
 	headers := []string{"Bucket Name", "Location", "Creation Date", "Storage Class"}
-	for c, header := range headers {
-		table.SetCell(0, c, tview.NewTableCell(header).SetTextColor(tcell.ColorYellow).SetAlign(tview.AlignCenter).SetSelectable(false))
-	}
+	createTableHeaders(table, headers)
 	if len(buckets) == 0 {
 		table.SetCell(1, 0, tview.NewTableCell("No OSS buckets found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
 	} else {
 		for r, bucket := range buckets {
-			table.SetCell(r+1, 0, tview.NewTableCell(bucket.Name).SetTextColor(tcell.ColorWhite).SetReference(bucket.Name))
-			table.SetCell(r+1, 1, tview.NewTableCell(bucket.Location).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 2, tview.NewTableCell(bucket.CreationDate.Format("2006-01-02 15:04:05")).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 3, tview.NewTableCell(bucket.StorageClass).SetTextColor(tcell.ColorWhite))
+			table.SetCell(r+1, 0, tview.NewTableCell(bucket.Name).SetTextColor(tcell.ColorWhite).SetReference(bucket.Name).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(bucket.Location).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(bucket.CreationDate.Format("2006-01-02 15:04:05")).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 3, tview.NewTableCell(bucket.StorageClass).SetTextColor(tcell.ColorWhite).SetExpansion(1))
 		}
 	}
 	table.SetTitle("OSS Buckets").SetBorder(true)
@@ -383,18 +394,16 @@ func createOssObjectListView(objects []oss.ObjectProperties, bucketName string) 
 	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)
 	table = setupTableWithFixedWidth(table)
 	headers := []string{"Object Key", "Size (Bytes)", "Last Modified", "Storage Class", "ETag"}
-	for c, header := range headers {
-		table.SetCell(0, c, tview.NewTableCell(header).SetTextColor(tcell.ColorYellow).SetAlign(tview.AlignCenter).SetSelectable(false))
-	}
+	createTableHeaders(table, headers)
 	if len(objects) == 0 {
 		table.SetCell(1, 0, tview.NewTableCell("No objects found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
 	} else {
 		for r, object := range objects {
-			table.SetCell(r+1, 0, tview.NewTableCell(object.Key).SetTextColor(tcell.ColorWhite).SetReference(object.Key))
-			table.SetCell(r+1, 1, tview.NewTableCell(fmt.Sprintf("%d", object.Size)).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 2, tview.NewTableCell(object.LastModified.Format("2006-01-02 15:04:05")).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 3, tview.NewTableCell(object.StorageClass).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 4, tview.NewTableCell(object.ETag).SetTextColor(tcell.ColorWhite))
+			table.SetCell(r+1, 0, tview.NewTableCell(object.Key).SetTextColor(tcell.ColorWhite).SetReference(object.Key).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(fmt.Sprintf("%d", object.Size)).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(object.LastModified.Format("2006-01-02 15:04:05")).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 3, tview.NewTableCell(object.StorageClass).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 4, tview.NewTableCell(object.ETag).SetTextColor(tcell.ColorWhite).SetExpansion(1))
 		}
 	}
 	table.SetTitle(fmt.Sprintf("Objects in %s", bucketName)).SetBorder(true)
@@ -409,20 +418,18 @@ func createRdsListView(instances []rds.DBInstance) *tview.Table {
 	table = setupTableWithFixedWidth(table)
 
 	headers := []string{"Instance ID", "Engine", "Version", "Class", "Status", "Description"}
-	for c, header := range headers {
-		table.SetCell(0, c, tview.NewTableCell(header).SetTextColor(tcell.ColorYellow).SetAlign(tview.AlignCenter).SetSelectable(false))
-	}
+	createTableHeaders(table, headers)
 
 	if len(instances) == 0 {
 		table.SetCell(1, 0, tview.NewTableCell("No RDS instances found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
 	} else {
 		for r, inst := range instances {
-			table.SetCell(r+1, 0, tview.NewTableCell(inst.DBInstanceId).SetTextColor(tcell.ColorWhite).SetReference(inst.DBInstanceId))
-			table.SetCell(r+1, 1, tview.NewTableCell(inst.Engine).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 2, tview.NewTableCell(inst.EngineVersion).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 3, tview.NewTableCell(inst.DBInstanceClass).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 4, tview.NewTableCell(inst.DBInstanceStatus).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 5, tview.NewTableCell(inst.DBInstanceDescription).SetTextColor(tcell.ColorWhite).SetMaxWidth(40))
+			table.SetCell(r+1, 0, tview.NewTableCell(inst.DBInstanceId).SetTextColor(tcell.ColorWhite).SetReference(inst.DBInstanceId).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(inst.Engine).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(inst.EngineVersion).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 3, tview.NewTableCell(inst.DBInstanceClass).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 4, tview.NewTableCell(inst.DBInstanceStatus).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 5, tview.NewTableCell(inst.DBInstanceDescription).SetTextColor(tcell.ColorWhite).SetMaxWidth(40).SetExpansion(1))
 		}
 	}
 	return table
@@ -471,7 +478,8 @@ func switchToEcsListView() {
 		pages.AddPage(pageEcsDetail, createEcsDetailView(selectedInstance), true, true)
 		app.SetFocus(ecsDetailView)
 	})
-	pages.AddPage(pageEcsList, ecsInstanceTable, true, true)
+	ecsListFlex := wrapTableInFlex(ecsInstanceTable)
+	pages.AddPage(pageEcsList, ecsListFlex, true, true)
 	app.SetFocus(ecsInstanceTable)
 }
 
@@ -489,7 +497,8 @@ func switchToDnsDomainsListView() {
 		domainName := dnsDomainsTable.GetCell(row, 0).GetReference().(string)
 		switchToDnsRecordsListView(domainName)
 	})
-	pages.AddPage(pageDnsDomains, dnsDomainsTable, true, true)
+	dnsDomainsListFlex := wrapTableInFlex(dnsDomainsTable)
+	pages.AddPage(pageDnsDomains, dnsDomainsListFlex, true, true)
 	app.SetFocus(dnsDomainsTable)
 }
 
@@ -501,7 +510,8 @@ func switchToDnsRecordsListView(domainName string) {
 	}
 	dnsRecordsTable = createDnsRecordsListView(records, domainName)
 	setupTableNavigation(dnsRecordsTable, nil)
-	pages.AddPage(pageDnsRecords, dnsRecordsTable, true, true)
+	dnsRecordsListFlex := wrapTableInFlex(dnsRecordsTable)
+	pages.AddPage(pageDnsRecords, dnsRecordsListFlex, true, true)
 	app.SetFocus(dnsRecordsTable)
 }
 
@@ -527,7 +537,8 @@ func switchToSlbListView() {
 		pages.AddPage(pageSlbDetail, createSlbDetailView(selectedSlb), true, true)
 		app.SetFocus(slbDetailView)
 	})
-	pages.AddPage(pageSlbList, slbInstanceTable, true, true)
+	slbListFlex := wrapTableInFlex(slbInstanceTable)
+	pages.AddPage(pageSlbList, slbListFlex, true, true)
 	app.SetFocus(slbInstanceTable)
 }
 
@@ -546,7 +557,8 @@ func switchToOssBucketListView() {
 		currentBucketName = bucketName
 		switchToOssObjectListView(bucketName)
 	})
-	pages.AddPage(pageOssBuckets, ossBucketTable, true, true)
+	ossBucketListFlex := wrapTableInFlex(ossBucketTable)
+	pages.AddPage(pageOssBuckets, ossBucketListFlex, true, true)
 	app.SetFocus(ossBucketTable)
 }
 
@@ -569,7 +581,8 @@ func switchToOssObjectListView(bucketName string) {
 			}
 		}
 	})
-	pages.AddPage(pageOssObjects, ossObjectTable, true, true)
+	ossObjectListFlex := wrapTableInFlex(ossObjectTable)
+	pages.AddPage(pageOssObjects, ossObjectListFlex, true, true)
 	app.SetFocus(ossObjectTable)
 }
 
@@ -600,7 +613,8 @@ func switchToRdsListView() {
 		pages.AddPage(pageRdsDetail, detailViewContent, true, true) // Add and show
 		app.SetFocus(rdsDetailView)
 	})
-	pages.AddPage(pageRdsList, rdsInstanceTable, true, true) // Add and show
+	rdsListFlex := wrapTableInFlex(rdsInstanceTable)
+	pages.AddPage(pageRdsList, rdsListFlex, true, true) // Add and show
 	app.SetFocus(rdsInstanceTable)
 }
 
