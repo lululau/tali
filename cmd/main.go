@@ -713,8 +713,8 @@ func main() {
 	regionID = os.Getenv("ALIBABA_CLOUD_REGION_ID")
 	ossEndpoint = os.Getenv("ALIBABA_CLOUD_OSS_ENDPOINT")
 
-	if accessKeyID == "" || accessKeySecret == "" || regionID == "" {
-		fmt.Println("Error: ALIBABA_CLOUD_ACCESS_KEY_ID, ALIBABA_CLOUD_ACCESS_KEY_SECRET, and ALIBABA_CLOUD_REGION_ID environment variables must be set.")
+	if accessKeyID == "" || accessKeySecret == "" || regionID == "" || ossEndpoint == "" {
+		fmt.Println("Error: ALIBABA_CLOUD_ACCESS_KEY_ID, ALIBABA_CLOUD_ACCESS_KEY_SECRET, ALIBABA_CLOUD_REGION_ID, and ALIBABA_CLOUD_OSS_ENDPOINT environment variables must be set.")
 		os.Exit(1)
 	}
 
