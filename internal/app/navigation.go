@@ -141,7 +141,7 @@ func (a *App) switchToEcsListView() {
 		a.allECSInstances = instances
 	}
 	a.ecsInstanceTable = ui.CreateEcsListView(a.allECSInstances)
-	ui.SetupTableNavigation(a.ecsInstanceTable, func(row, col int) {
+	ui.SetupTableNavigationWithSearch(a.ecsInstanceTable, a, func(row, col int) {
 		instanceId := a.ecsInstanceTable.GetCell(row, 0).GetReference().(string)
 		var selectedInstance interface{}
 		for _, inst := range a.allECSInstances {
@@ -151,39 +151,34 @@ func (a *App) switchToEcsListView() {
 			}
 		}
 		a.currentDetailData = selectedInstance
-		detailView := ui.CreateInteractiveJSONDetailView(
+		detailView, _ := ui.CreateInteractiveJSONDetailViewWithSearch(
 			fmt.Sprintf("ECS Details: %s", instanceId),
 			selectedInstance,
-			a.yankTracker,
+			a,
 			func() {
-				// Copy callback
 				err := ui.CopyToClipboard(selectedInstance)
 				if err != nil {
-					a.showErrorModal(fmt.Sprintf("Failed to copy to clipboard: %v", err))
+					a.showErrorModal(fmt.Sprintf("Failed to copy: %v", err))
 				} else {
-					a.showErrorModal("ECS instance details copied to clipboard!")
+					a.showErrorModal("Copied!")
 				}
 			},
 			func() {
-				// Edit callback
 				err := ui.OpenInNvim(selectedInstance)
 				if err != nil {
-					a.showErrorModal(fmt.Sprintf("Failed to open in nvim: %v", err))
+					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
 				}
 			},
 		)
 		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
 		a.pages.AddPage(ui.PageEcsDetail, detailViewWithInstructions, true, true)
-		// Extract the detail view from the flex container
 		if detailViewWithInstructions.GetItemCount() > 1 {
 			a.ecsDetailView = detailViewWithInstructions.GetItem(1).(*tview.TextView)
 		}
 		a.tviewApp.SetFocus(a.ecsDetailView)
 	})
 
-	// Setup table yank functionality
 	a.setupTableYankFunctionality(a.ecsInstanceTable, a.allECSInstances)
-
 	ecsListFlex := ui.WrapTableInFlex(a.ecsInstanceTable)
 	a.pages.AddPage(ui.PageEcsList, ecsListFlex, true, true)
 	a.tviewApp.SetFocus(a.ecsInstanceTable)
@@ -200,14 +195,12 @@ func (a *App) switchToDnsDomainsListView() {
 		a.allDomains = domains
 	}
 	a.dnsDomainsTable = ui.CreateDnsDomainsListView(a.allDomains)
-	ui.SetupTableNavigation(a.dnsDomainsTable, func(row, col int) {
+	ui.SetupTableNavigationWithSearch(a.dnsDomainsTable, a, func(row, col int) {
 		domainName := a.dnsDomainsTable.GetCell(row, 0).GetReference().(string)
 		a.switchToDnsRecordsListView(domainName)
 	})
 
-	// Setup table yank functionality
 	a.setupTableYankFunctionality(a.dnsDomainsTable, a.allDomains)
-
 	dnsDomainsListFlex := ui.WrapTableInFlex(a.dnsDomainsTable)
 	a.pages.AddPage(ui.PageDnsDomains, dnsDomainsListFlex, true, true)
 	a.tviewApp.SetFocus(a.dnsDomainsTable)
@@ -221,11 +214,9 @@ func (a *App) switchToDnsRecordsListView(domainName string) {
 		return
 	}
 	a.dnsRecordsTable = ui.CreateDnsRecordsListView(records, domainName)
-	ui.SetupTableNavigation(a.dnsRecordsTable, nil)
+	ui.SetupTableNavigationWithSearch(a.dnsRecordsTable, a, nil)
 
-	// Setup table yank functionality
 	a.setupTableYankFunctionality(a.dnsRecordsTable, records)
-
 	dnsRecordsListFlex := ui.WrapTableInFlex(a.dnsRecordsTable)
 	a.pages.AddPage(ui.PageDnsRecords, dnsRecordsListFlex, true, true)
 	a.tviewApp.SetFocus(a.dnsRecordsTable)
@@ -242,7 +233,7 @@ func (a *App) switchToSlbListView() {
 		a.allSLBInstances = slbs
 	}
 	a.slbInstanceTable = ui.CreateSlbListView(a.allSLBInstances)
-	ui.SetupTableNavigation(a.slbInstanceTable, func(row, col int) {
+	ui.SetupTableNavigationWithSearch(a.slbInstanceTable, a, func(row, col int) {
 		slbId := a.slbInstanceTable.GetCell(row, 0).GetReference().(string)
 		var selectedSlb interface{}
 		for _, lb := range a.allSLBInstances {
@@ -252,39 +243,34 @@ func (a *App) switchToSlbListView() {
 			}
 		}
 		a.currentDetailData = selectedSlb
-		detailView := ui.CreateInteractiveJSONDetailView(
+		detailView, _ := ui.CreateInteractiveJSONDetailViewWithSearch(
 			fmt.Sprintf("SLB Details: %s", slbId),
 			selectedSlb,
-			a.yankTracker,
+			a,
 			func() {
-				// Copy callback
 				err := ui.CopyToClipboard(selectedSlb)
 				if err != nil {
-					a.showErrorModal(fmt.Sprintf("Failed to copy to clipboard: %v", err))
+					a.showErrorModal(fmt.Sprintf("Failed to copy: %v", err))
 				} else {
-					a.showErrorModal("SLB instance details copied to clipboard!")
+					a.showErrorModal("Copied!")
 				}
 			},
 			func() {
-				// Edit callback
 				err := ui.OpenInNvim(selectedSlb)
 				if err != nil {
-					a.showErrorModal(fmt.Sprintf("Failed to open in nvim: %v", err))
+					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
 				}
 			},
 		)
 		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
 		a.pages.AddPage(ui.PageSlbDetail, detailViewWithInstructions, true, true)
-		// Extract the detail view from the flex container
 		if detailViewWithInstructions.GetItemCount() > 1 {
 			a.slbDetailView = detailViewWithInstructions.GetItem(1).(*tview.TextView)
 		}
 		a.tviewApp.SetFocus(a.slbDetailView)
 	})
 
-	// Setup table yank functionality
 	a.setupTableYankFunctionality(a.slbInstanceTable, a.allSLBInstances)
-
 	slbListFlex := ui.WrapTableInFlex(a.slbInstanceTable)
 	a.pages.AddPage(ui.PageSlbList, slbListFlex, true, true)
 	a.tviewApp.SetFocus(a.slbInstanceTable)
@@ -301,11 +287,12 @@ func (a *App) switchToOssBucketListView() {
 		a.allOssBuckets = buckets
 	}
 	a.ossBucketTable = ui.CreateOssBucketListView(a.allOssBuckets)
-	ui.SetupTableNavigation(a.ossBucketTable, func(row, col int) {
+	ui.SetupTableNavigationWithSearch(a.ossBucketTable, a, func(row, col int) {
 		bucketName := a.ossBucketTable.GetCell(row, 0).GetReference().(string)
 		a.currentBucketName = bucketName
 		a.switchToOssObjectListView(bucketName)
 	})
+
 	ossBucketListFlex := ui.WrapTableInFlex(a.ossBucketTable)
 	a.pages.AddPage(ui.PageOssBuckets, ossBucketListFlex, true, true)
 	a.tviewApp.SetFocus(a.ossBucketTable)
@@ -318,7 +305,7 @@ func (a *App) switchToOssObjectListView(bucketName string) {
 	a.ossCurrentMarker = ""
 	a.ossPreviousMarkers = []string{}
 	a.ossCurrentPage = 1
-	a.ossPageSize = 20 // Set page size to 20 objects per page
+	a.ossPageSize = 20
 	a.ossHasNextPage = false
 
 	// Load first page
@@ -336,49 +323,43 @@ func (a *App) loadOssObjectPage() {
 	a.ossHasNextPage = result.IsTruncated
 	hasPrevious := len(a.ossPreviousMarkers) > 0
 
-	// Update mode line with page info
 	pageInfo := fmt.Sprintf("Page %d", a.ossCurrentPage)
 	if a.ossHasNextPage {
 		pageInfo += "+"
 	}
 	ui.UpdateModeLineWithPageInfo(a.modeLine, a.currentProfile, pageInfo)
 
-	// Create paginated view
 	ossObjectView := ui.CreateOssObjectPaginatedView(result.Objects, a.currentBucketName, a.ossCurrentPage, a.ossHasNextPage, hasPrevious)
 
-	// Extract the table from the flex container for navigation setup
 	if ossObjectView.GetItemCount() > 0 {
 		a.ossObjectTable = ossObjectView.GetItem(0).(*tview.Table)
 	}
 
-	// Setup table navigation with object selection and yank functionality
-	ui.SetupTableNavigation(a.ossObjectTable, func(row, col int) {
+	ui.SetupTableNavigationWithSearch(a.ossObjectTable, a, func(row, col int) {
 		objectKey := a.ossObjectTable.GetCell(row, 0).GetReference().(string)
-		// Find the object details
 		for _, obj := range result.Objects {
 			if obj.Key == objectKey {
 				a.currentDetailData = obj
-				a.ossDetailView = ui.CreateInteractiveJSONDetailView(
+				view, _ := ui.CreateInteractiveJSONDetailViewWithSearch(
 					fmt.Sprintf("Object Details: %s", objectKey),
 					obj,
-					a.yankTracker,
+					a,
 					func() {
-						// Copy callback
 						err := ui.CopyToClipboard(obj)
 						if err != nil {
-							a.showErrorModal(fmt.Sprintf("Failed to copy to clipboard: %v", err))
+							a.showErrorModal(fmt.Sprintf("Failed to copy: %v", err))
 						} else {
-							a.showErrorModal("Object details copied to clipboard!")
+							a.showErrorModal("Copied!")
 						}
 					},
 					func() {
-						// Edit callback
 						err := ui.OpenInNvim(obj)
 						if err != nil {
-							a.showErrorModal(fmt.Sprintf("Failed to open in nvim: %v", err))
+							a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
 						}
 					},
 				)
+				a.ossDetailView = view
 				a.pages.AddPage("ossObjectDetail", a.ossDetailView, true, true)
 				a.tviewApp.SetFocus(a.ossDetailView)
 				break
@@ -386,12 +367,8 @@ func (a *App) loadOssObjectPage() {
 		}
 	})
 
-	// Setup table yank functionality
 	a.setupTableYankFunctionality(a.ossObjectTable, result.Objects)
-
-	// Setup pagination navigation
 	a.setupOssPaginationNavigation(ossObjectView, result)
-
 	a.pages.AddPage(ui.PageOssObjects, ossObjectView, true, true)
 	a.tviewApp.SetFocus(a.ossObjectTable)
 }
@@ -682,7 +659,7 @@ func (a *App) switchToRdsListView() {
 		a.allRDSInstances = instances
 	}
 	a.rdsInstanceTable = ui.CreateRdsListView(a.allRDSInstances)
-	ui.SetupTableNavigation(a.rdsInstanceTable, func(row, col int) {
+	ui.SetupTableNavigationWithSearch(a.rdsInstanceTable, a, func(row, col int) {
 		cell := a.rdsInstanceTable.GetCell(row, 0)
 		instanceId, ok := cell.GetReference().(string)
 		if !ok {
@@ -696,42 +673,35 @@ func (a *App) switchToRdsListView() {
 			}
 		}
 		a.currentDetailData = selectedInstance
-		detailView := ui.CreateInteractiveJSONDetailView(
+		detailView, _ := ui.CreateInteractiveJSONDetailViewWithSearch(
 			fmt.Sprintf("RDS Details: %s", instanceId),
 			selectedInstance,
-			a.yankTracker,
+			a,
 			func() {
-				// Copy callback
 				err := ui.CopyToClipboard(selectedInstance)
 				if err != nil {
-					a.showErrorModal(fmt.Sprintf("Failed to copy to clipboard: %v", err))
+					a.showErrorModal(fmt.Sprintf("Copy failed: %v", err))
 				} else {
-					a.showErrorModal("RDS instance details copied to clipboard!")
+					a.showErrorModal("Copied!")
 				}
 			},
 			func() {
-				// Edit callback
 				err := ui.OpenInNvim(selectedInstance)
 				if err != nil {
-					a.showErrorModal(fmt.Sprintf("Failed to open in nvim: %v", err))
+					a.showErrorModal(fmt.Sprintf("Edit failed: %v", err))
 				}
 			},
 		)
 		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
 		a.pages.AddPage(ui.PageRdsDetail, detailViewWithInstructions, true, true)
-		// Extract the detail view from the flex container
 		if detailViewWithInstructions.GetItemCount() > 1 {
 			a.rdsDetailView = detailViewWithInstructions.GetItem(1).(*tview.TextView)
 		}
 		a.tviewApp.SetFocus(a.rdsDetailView)
 	})
 
-	// Setup table yank functionality
 	a.setupTableYankFunctionality(a.rdsInstanceTable, a.allRDSInstances)
-
-	// Setup RDS specific key handlers for D (databases) and A (accounts)
 	a.setupRdsKeyHandlers(a.rdsInstanceTable)
-
 	rdsListFlex := ui.WrapTableInFlex(a.rdsInstanceTable)
 	a.pages.AddPage(ui.PageRdsList, rdsListFlex, true, true)
 	a.tviewApp.SetFocus(a.rdsInstanceTable)
@@ -784,7 +754,7 @@ func (a *App) switchToRdsDatabasesView(instanceId string) {
 	a.currentRdsInstanceId = instanceId
 	a.rdsDatabaseTable = ui.CreateRdsDatabasesListView(databases, instanceId)
 
-	ui.SetupTableNavigation(a.rdsDatabaseTable, func(row, col int) {
+	ui.SetupTableNavigationWithSearch(a.rdsDatabaseTable, a, func(row, col int) {
 		dbName := a.rdsDatabaseTable.GetCell(row, 0).GetReference().(string)
 		var selectedDatabase interface{}
 		for _, db := range databases {
@@ -794,24 +764,22 @@ func (a *App) switchToRdsDatabasesView(instanceId string) {
 			}
 		}
 		a.currentDetailData = selectedDatabase
-		detailView := ui.CreateInteractiveJSONDetailView(
+		detailView, _ := ui.CreateInteractiveJSONDetailViewWithSearch(
 			fmt.Sprintf("Database Details: %s", dbName),
 			selectedDatabase,
-			a.yankTracker,
+			a,
 			func() {
-				// Copy callback
 				err := ui.CopyToClipboard(selectedDatabase)
 				if err != nil {
-					a.showErrorModal(fmt.Sprintf("Failed to copy to clipboard: %v", err))
+					a.showErrorModal(fmt.Sprintf("Copy failed: %v", err))
 				} else {
-					a.showErrorModal("Database details copied to clipboard!")
+					a.showErrorModal("Copied!")
 				}
 			},
 			func() {
-				// Edit callback
 				err := ui.OpenInNvim(selectedDatabase)
 				if err != nil {
-					a.showErrorModal(fmt.Sprintf("Failed to open in nvim: %v", err))
+					a.showErrorModal(fmt.Sprintf("Edit failed: %v", err))
 				}
 			},
 		)
@@ -820,9 +788,7 @@ func (a *App) switchToRdsDatabasesView(instanceId string) {
 		a.tviewApp.SetFocus(detailView)
 	})
 
-	// Setup table yank functionality
 	a.setupTableYankFunctionality(a.rdsDatabaseTable, databases)
-
 	rdsDatabaseListFlex := ui.WrapTableInFlex(a.rdsDatabaseTable)
 	a.pages.AddPage(ui.PageRdsDatabases, rdsDatabaseListFlex, true, true)
 	a.tviewApp.SetFocus(a.rdsDatabaseTable)
@@ -839,7 +805,7 @@ func (a *App) switchToRdsAccountsView(instanceId string) {
 	a.currentRdsInstanceId = instanceId
 	a.rdsAccountTable = ui.CreateRdsAccountsListView(accounts, instanceId)
 
-	ui.SetupTableNavigation(a.rdsAccountTable, func(row, col int) {
+	ui.SetupTableNavigationWithSearch(a.rdsAccountTable, a, func(row, col int) {
 		accountName := a.rdsAccountTable.GetCell(row, 0).GetReference().(string)
 		var selectedAccount interface{}
 		for _, account := range accounts {
@@ -849,24 +815,22 @@ func (a *App) switchToRdsAccountsView(instanceId string) {
 			}
 		}
 		a.currentDetailData = selectedAccount
-		detailView := ui.CreateInteractiveJSONDetailView(
+		detailView, _ := ui.CreateInteractiveJSONDetailViewWithSearch(
 			fmt.Sprintf("Account Details: %s", accountName),
 			selectedAccount,
-			a.yankTracker,
+			a,
 			func() {
-				// Copy callback
 				err := ui.CopyToClipboard(selectedAccount)
 				if err != nil {
-					a.showErrorModal(fmt.Sprintf("Failed to copy to clipboard: %v", err))
+					a.showErrorModal(fmt.Sprintf("Copy failed: %v", err))
 				} else {
-					a.showErrorModal("Account details copied to clipboard!")
+					a.showErrorModal("Copied!")
 				}
 			},
 			func() {
-				// Edit callback
 				err := ui.OpenInNvim(selectedAccount)
 				if err != nil {
-					a.showErrorModal(fmt.Sprintf("Failed to open in nvim: %v", err))
+					a.showErrorModal(fmt.Sprintf("Edit failed: %v", err))
 				}
 			},
 		)
@@ -875,9 +839,7 @@ func (a *App) switchToRdsAccountsView(instanceId string) {
 		a.tviewApp.SetFocus(detailView)
 	})
 
-	// Setup table yank functionality
 	a.setupTableYankFunctionality(a.rdsAccountTable, accounts)
-
 	rdsAccountListFlex := ui.WrapTableInFlex(a.rdsAccountTable)
 	a.pages.AddPage(ui.PageRdsAccounts, rdsAccountListFlex, true, true)
 	a.tviewApp.SetFocus(a.rdsAccountTable)

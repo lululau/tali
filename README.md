@@ -130,6 +130,17 @@ The application uses vim-style keyboard navigation:
 - `e` - Open JSON data in nvim for editing (in detail views)
 - Detail views support mouse text selection
 
+#### Search Functionality
+- `/` - Enter search mode (shows search bar at bottom of screen, vim-style)
+- `Enter` - Execute search and highlight matches
+- `Escape` - Exit search mode
+- `n` - Go to next search result
+- `p` - Go to previous search result
+- Search is case-insensitive by default
+- Works in all table views and JSON detail views
+- Search results are highlighted in yellow
+- Search interface mimics vim's behavior with bottom search bar
+
 #### List Navigation
 - `j` - Move down
 - `k` - Move up

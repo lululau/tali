@@ -40,6 +40,12 @@ type App struct {
 	rdsDatabaseTable *tview.Table
 	rdsAccountTable  *tview.Table
 	modeLine         *tview.TextView
+	mainLayout       *tview.Flex // Keep for now, might remove if root structure changes significantly
+
+	// Shared Search UI
+	searchBar           *tview.InputField
+	searchBarContainer  *tview.Pages
+	activeSearchHandler *ui.VimSearchHandler
 
 	// Data cache
 	allECSInstances      []ecs.Instance
@@ -122,6 +128,8 @@ func New() (*App, error) {
 		services:       services,
 		currentProfile: currentProfile,
 		yankTracker:    ui.NewYankTracker(),
+
+		// Search handlers will be initialized when creating views
 	}
 
 	// Initialize UI
@@ -155,19 +163,68 @@ func (a *App) initializeUI() {
 		a.Stop,
 	)
 
-	// Create main layout with mode line at bottom
-	mainLayout := tview.NewFlex().SetDirection(tview.FlexRow)
-	mainLayout.AddItem(a.pages, 0, 1, true)
-	mainLayout.AddItem(a.modeLine, 1, 0, false)
+	// Create shared search bar
+	a.searchBar = ui.CreateSearchBar()
+	a.searchBar.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if a.activeSearchHandler == nil {
+			return event
+		}
+		switch event.Key() {
+		case tcell.KeyEnter:
+			a.activeSearchHandler.PerformSearch(a.searchBar.GetText())
+			return nil
+		case tcell.KeyEscape:
+			a.activeSearchHandler.ExitSearchMode()
+			return nil
+		}
+		return event
+	})
+
+	// Create search bar container (for visibility control)
+	a.searchBarContainer = tview.NewPages()
+	emptyBox := tview.NewBox().SetBorder(false) // Placeholder for hidden search bar
+	a.searchBarContainer.AddPage("visible", a.searchBar, true, false)
+	a.searchBarContainer.AddPage("hidden", emptyBox, true, true) // Initially hidden
+
+	// Create main layout
+	a.mainLayout = tview.NewFlex().SetDirection(tview.FlexRow)
+	a.mainLayout.AddItem(a.pages, 0, 1, true)               // Main content
+	a.mainLayout.AddItem(a.searchBarContainer, 1, 0, false) // Search bar (or empty space)
+	a.mainLayout.AddItem(a.modeLine, 1, 0, false)           // Mode line
 
 	// Add main menu to pages
 	a.pages.AddPage(ui.PageMainMenu, a.mainMenu, true, true)
 
-	// Set the main layout as root instead of pages directly
-	a.tviewApp.SetRoot(mainLayout, true)
+	// Set the main layout as root
+	a.tviewApp.SetRoot(a.mainLayout, true)
 
 	// Set up global input capture
 	a.setupGlobalInputCapture()
+}
+
+// SetSearchBarVisibility controls the visibility of the shared search bar
+func (a *App) SetSearchBarVisibility(visible bool) {
+	if visible {
+		a.searchBar.SetText("")
+		a.searchBarContainer.SwitchToPage("visible")
+		a.tviewApp.SetFocus(a.searchBar)
+	} else {
+		a.searchBarContainer.SwitchToPage("hidden")
+		if a.activeSearchHandler != nil && a.activeSearchHandler.GetMainComponent() != nil {
+			a.tviewApp.SetFocus(a.activeSearchHandler.GetMainComponent())
+		}
+	}
+	// It might be necessary to call a.tviewApp.Draw() here if updates are not immediate
+}
+
+// SetActiveSearchHandler sets the currently active search handler
+func (a *App) SetActiveSearchHandler(handler *ui.VimSearchHandler) {
+	a.activeSearchHandler = handler
+}
+
+// GetAppSearchBar returns the shared search bar instance
+func (a *App) GetAppSearchBar() *tview.InputField {
+	return a.searchBar
 }
 
 // showErrorModal shows an error modal
