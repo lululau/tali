@@ -91,7 +91,7 @@ func CreateDnsRecordsListView(records []alidns.Record, domainName string) *tview
 		table.SetCell(1, 0, tview.NewTableCell("No DNS records found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
 	} else {
 		for r, record := range records {
-			table.SetCell(r+1, 0, tview.NewTableCell(record.RecordId).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 0, tview.NewTableCell(record.RecordId).SetTextColor(tcell.ColorWhite).SetReference(record.RecordId).SetExpansion(1))
 			table.SetCell(r+1, 1, tview.NewTableCell(record.RR).SetTextColor(tcell.ColorWhite).SetExpansion(1))
 			table.SetCell(r+1, 2, tview.NewTableCell(record.Type).SetTextColor(tcell.ColorWhite).SetExpansion(1))
 			table.SetCell(r+1, 3, tview.NewTableCell(record.Value).SetTextColor(tcell.ColorWhite).SetExpansion(1))

@@ -61,6 +61,7 @@ export ALIBABA_CLOUD_OSS_ENDPOINT="oss-cn-hangzhou.aliyuncs.com"
 - `[`: 上一页
 - `]`: 下一页
 - `0`: 回到第一页
+- 页面信息显示在右下角 mode line 中
 
 #### 列表导航
 - `j`: 向下移动
@@ -71,6 +72,12 @@ export ALIBABA_CLOUD_OSS_ENDPOINT="oss-cn-hangzhou.aliyuncs.com"
 - `Esc` 或 `q`: 返回列表页面
 - `Q`: 退出应用程序
 - 方向键: 滚动查看 JSON 内容
+
+#### 数据复制和编辑
+- `yy` (双击 y): 在表格中复制当前行的 JSON 数据到系统剪贴板
+- `yy` (双击 y): 在详情页面复制完整 JSON 数据到系统剪贴板
+- `e`: 在详情页面使用 nvim 打开 JSON 数据进行编辑
+- 详情页面支持鼠标选中文字
 
 ## 功能特性
 

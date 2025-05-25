@@ -56,6 +56,10 @@ type App struct {
 
 	// Configuration
 	currentProfile string
+
+	// Interaction state
+	yankTracker       *ui.YankTracker
+	currentDetailData interface{} // Store current detail data for copying/editing
 }
 
 // Services holds all service instances
@@ -114,6 +118,7 @@ func New() (*App, error) {
 		clients:        clients,
 		services:       services,
 		currentProfile: currentProfile,
+		yankTracker:    ui.NewYankTracker(),
 	}
 
 	// Initialize UI

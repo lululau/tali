@@ -8,7 +8,12 @@ A Terminal User Interface (TUI) application for managing Alibaba Cloud resources
 - **DNS Management**: Browse AliDNS domains and their DNS records
 - **SLB Instances**: Monitor Server Load Balancer instances and their configurations with JSON details
 - **RDS Instances**: Inspect RDS database instances and their properties with JSON details
-- **OSS Management**: Browse OSS buckets and objects with full details
+- **OSS Management**: Browse OSS buckets and objects with pagination and full details
+- **Interactive Features**: 
+  - Copy any data as JSON to clipboard with double-y
+  - Edit JSON data in external nvim editor
+  - Mouse text selection in detail views
+  - Real-time pagination info in mode line
 
 ## Prerequisites
 
@@ -112,6 +117,13 @@ The application uses vim-style keyboard navigation:
 - `[` - Previous page
 - `]` - Next page  
 - `0` - Go to first page
+- Page information displayed in the bottom-right mode line
+
+#### Data Copying and Editing
+- `yy` (double-y) - Copy current row JSON data to clipboard (in tables)
+- `yy` (double-y) - Copy complete JSON data to clipboard (in detail views)
+- `e` - Open JSON data in nvim for editing (in detail views)
+- Detail views support mouse text selection
 
 #### List Navigation
 - `j` - Move down

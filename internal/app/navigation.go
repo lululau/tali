@@ -3,6 +3,11 @@ package app
 import (
 	"fmt"
 
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/alidns"
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/rds"
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/slb"
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
@@ -63,6 +68,8 @@ func (a *App) handleEscapeKey(currentPageName string) {
 	case ui.PageSlbDetail:
 		a.handleNavigation(ui.PageSlbList, a.slbInstanceTable)
 	case ui.PageOssObjects:
+		// Restore normal mode line when leaving OSS objects
+		ui.UpdateModeLine(a.modeLine, a.currentProfile)
 		a.handleNavigation(ui.PageOssBuckets, a.ossBucketTable)
 	case "ossObjectDetail":
 		a.handleNavigation(ui.PageOssObjects, a.ossObjectTable)
@@ -87,6 +94,8 @@ func (a *App) handleBackKey(currentPageName string) {
 	case ui.PageSlbDetail:
 		a.handleNavigation(ui.PageSlbList, a.slbInstanceTable)
 	case ui.PageOssObjects:
+		// Restore normal mode line when leaving OSS objects
+		ui.UpdateModeLine(a.modeLine, a.currentProfile)
 		a.handleNavigation(ui.PageOssBuckets, a.ossBucketTable)
 	case "ossObjectDetail":
 		a.handleNavigation(ui.PageOssObjects, a.ossObjectTable)
@@ -125,14 +134,40 @@ func (a *App) switchToEcsListView() {
 				break
 			}
 		}
-		detailView := ui.CreateEcsDetailView(selectedInstance)
-		a.pages.AddPage(ui.PageEcsDetail, detailView, true, true)
+		a.currentDetailData = selectedInstance
+		detailView := ui.CreateInteractiveJSONDetailView(
+			fmt.Sprintf("ECS Details: %s", instanceId),
+			selectedInstance,
+			a.yankTracker,
+			func() {
+				// Copy callback
+				err := ui.CopyToClipboard(selectedInstance)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to copy to clipboard: %v", err))
+				} else {
+					a.showErrorModal("ECS instance details copied to clipboard!")
+				}
+			},
+			func() {
+				// Edit callback
+				err := ui.OpenInNvim(selectedInstance)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to open in nvim: %v", err))
+				}
+			},
+		)
+		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
+		a.pages.AddPage(ui.PageEcsDetail, detailViewWithInstructions, true, true)
 		// Extract the detail view from the flex container
-		if detailView.GetItemCount() > 1 {
-			a.ecsDetailView = detailView.GetItem(1).(*tview.TextView)
+		if detailViewWithInstructions.GetItemCount() > 1 {
+			a.ecsDetailView = detailViewWithInstructions.GetItem(1).(*tview.TextView)
 		}
 		a.tviewApp.SetFocus(a.ecsDetailView)
 	})
+
+	// Setup table yank functionality
+	a.setupTableYankFunctionality(a.ecsInstanceTable, a.allECSInstances)
+
 	ecsListFlex := ui.WrapTableInFlex(a.ecsInstanceTable)
 	a.pages.AddPage(ui.PageEcsList, ecsListFlex, true, true)
 	a.tviewApp.SetFocus(a.ecsInstanceTable)
@@ -153,6 +188,10 @@ func (a *App) switchToDnsDomainsListView() {
 		domainName := a.dnsDomainsTable.GetCell(row, 0).GetReference().(string)
 		a.switchToDnsRecordsListView(domainName)
 	})
+
+	// Setup table yank functionality
+	a.setupTableYankFunctionality(a.dnsDomainsTable, a.allDomains)
+
 	dnsDomainsListFlex := ui.WrapTableInFlex(a.dnsDomainsTable)
 	a.pages.AddPage(ui.PageDnsDomains, dnsDomainsListFlex, true, true)
 	a.tviewApp.SetFocus(a.dnsDomainsTable)
@@ -167,6 +206,10 @@ func (a *App) switchToDnsRecordsListView(domainName string) {
 	}
 	a.dnsRecordsTable = ui.CreateDnsRecordsListView(records, domainName)
 	ui.SetupTableNavigation(a.dnsRecordsTable, nil)
+
+	// Setup table yank functionality
+	a.setupTableYankFunctionality(a.dnsRecordsTable, records)
+
 	dnsRecordsListFlex := ui.WrapTableInFlex(a.dnsRecordsTable)
 	a.pages.AddPage(ui.PageDnsRecords, dnsRecordsListFlex, true, true)
 	a.tviewApp.SetFocus(a.dnsRecordsTable)
@@ -192,14 +235,40 @@ func (a *App) switchToSlbListView() {
 				break
 			}
 		}
-		detailView := ui.CreateSlbDetailView(selectedSlb)
-		a.pages.AddPage(ui.PageSlbDetail, detailView, true, true)
+		a.currentDetailData = selectedSlb
+		detailView := ui.CreateInteractiveJSONDetailView(
+			fmt.Sprintf("SLB Details: %s", slbId),
+			selectedSlb,
+			a.yankTracker,
+			func() {
+				// Copy callback
+				err := ui.CopyToClipboard(selectedSlb)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to copy to clipboard: %v", err))
+				} else {
+					a.showErrorModal("SLB instance details copied to clipboard!")
+				}
+			},
+			func() {
+				// Edit callback
+				err := ui.OpenInNvim(selectedSlb)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to open in nvim: %v", err))
+				}
+			},
+		)
+		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
+		a.pages.AddPage(ui.PageSlbDetail, detailViewWithInstructions, true, true)
 		// Extract the detail view from the flex container
-		if detailView.GetItemCount() > 1 {
-			a.slbDetailView = detailView.GetItem(1).(*tview.TextView)
+		if detailViewWithInstructions.GetItemCount() > 1 {
+			a.slbDetailView = detailViewWithInstructions.GetItem(1).(*tview.TextView)
 		}
 		a.tviewApp.SetFocus(a.slbDetailView)
 	})
+
+	// Setup table yank functionality
+	a.setupTableYankFunctionality(a.slbInstanceTable, a.allSLBInstances)
+
 	slbListFlex := ui.WrapTableInFlex(a.slbInstanceTable)
 	a.pages.AddPage(ui.PageSlbList, slbListFlex, true, true)
 	a.tviewApp.SetFocus(a.slbInstanceTable)
@@ -251,6 +320,13 @@ func (a *App) loadOssObjectPage() {
 	a.ossHasNextPage = result.IsTruncated
 	hasPrevious := len(a.ossPreviousMarkers) > 0
 
+	// Update mode line with page info
+	pageInfo := fmt.Sprintf("Page %d", a.ossCurrentPage)
+	if a.ossHasNextPage {
+		pageInfo += "+"
+	}
+	ui.UpdateModeLineWithPageInfo(a.modeLine, a.currentProfile, pageInfo)
+
 	// Create paginated view
 	ossObjectView := ui.CreateOssObjectPaginatedView(result.Objects, a.currentBucketName, a.ossCurrentPage, a.ossHasNextPage, hasPrevious)
 
@@ -259,13 +335,34 @@ func (a *App) loadOssObjectPage() {
 		a.ossObjectTable = ossObjectView.GetItem(0).(*tview.Table)
 	}
 
-	// Setup table navigation with object selection
+	// Setup table navigation with object selection and yank functionality
 	ui.SetupTableNavigation(a.ossObjectTable, func(row, col int) {
 		objectKey := a.ossObjectTable.GetCell(row, 0).GetReference().(string)
 		// Find the object details
 		for _, obj := range result.Objects {
 			if obj.Key == objectKey {
-				a.ossDetailView = ui.CreateJSONDetailView(fmt.Sprintf("Object Details: %s", objectKey), obj)
+				a.currentDetailData = obj
+				a.ossDetailView = ui.CreateInteractiveJSONDetailView(
+					fmt.Sprintf("Object Details: %s", objectKey),
+					obj,
+					a.yankTracker,
+					func() {
+						// Copy callback
+						err := ui.CopyToClipboard(obj)
+						if err != nil {
+							a.showErrorModal(fmt.Sprintf("Failed to copy to clipboard: %v", err))
+						} else {
+							a.showErrorModal("Object details copied to clipboard!")
+						}
+					},
+					func() {
+						// Edit callback
+						err := ui.OpenInNvim(obj)
+						if err != nil {
+							a.showErrorModal(fmt.Sprintf("Failed to open in nvim: %v", err))
+						}
+					},
+				)
 				a.pages.AddPage("ossObjectDetail", a.ossDetailView, true, true)
 				a.tviewApp.SetFocus(a.ossDetailView)
 				break
@@ -273,11 +370,98 @@ func (a *App) loadOssObjectPage() {
 		}
 	})
 
+	// Setup table yank functionality
+	a.setupTableYankFunctionality(a.ossObjectTable, result.Objects)
+
 	// Setup pagination navigation
 	a.setupOssPaginationNavigation(ossObjectView, result)
 
 	a.pages.AddPage(ui.PageOssObjects, ossObjectView, true, true)
 	a.tviewApp.SetFocus(a.ossObjectTable)
+}
+
+// setupTableYankFunctionality adds yank (copy) functionality to tables
+func (a *App) setupTableYankFunctionality(table *tview.Table, data interface{}) {
+	originalInputCapture := table.GetInputCapture()
+
+	table.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Rune() == 'y' {
+			if a.yankTracker.HandleYankKey() {
+				// Double-y detected, copy current row
+				row, _ := table.GetSelection()
+				if row > 0 { // Skip header row
+					var rowData interface{}
+
+					// Get the reference from the first cell to identify the item
+					if cell := table.GetCell(row, 0); cell != nil {
+						if ref := cell.GetReference(); ref != nil {
+							// Find the corresponding data item based on type
+							switch items := data.(type) {
+							case []oss.ObjectProperties:
+								for _, obj := range items {
+									if obj.Key == ref.(string) {
+										rowData = obj
+										break
+									}
+								}
+							case []ecs.Instance:
+								for _, inst := range items {
+									if inst.InstanceId == ref.(string) {
+										rowData = inst
+										break
+									}
+								}
+							case []slb.LoadBalancer:
+								for _, lb := range items {
+									if lb.LoadBalancerId == ref.(string) {
+										rowData = lb
+										break
+									}
+								}
+							case []rds.DBInstance:
+								for _, db := range items {
+									if db.DBInstanceId == ref.(string) {
+										rowData = db
+										break
+									}
+								}
+							case []alidns.DomainInDescribeDomains:
+								for _, domain := range items {
+									if domain.DomainName == ref.(string) {
+										rowData = domain
+										break
+									}
+								}
+							case []alidns.Record:
+								for _, record := range items {
+									if record.RecordId == ref.(string) {
+										rowData = record
+										break
+									}
+								}
+							}
+						}
+					}
+
+					if rowData != nil {
+						err := ui.CopyToClipboard(rowData)
+						if err != nil {
+							a.showErrorModal(fmt.Sprintf("Failed to copy to clipboard: %v", err))
+						} else {
+							a.showErrorModal("Row data copied to clipboard!")
+						}
+					}
+				}
+			}
+			return nil
+		}
+
+		// Call original input capture if it exists
+		if originalInputCapture != nil {
+			return originalInputCapture(event)
+		}
+		return event
+	})
 }
 
 // setupOssPaginationNavigation sets up pagination key bindings
@@ -481,14 +665,40 @@ func (a *App) switchToRdsListView() {
 				break
 			}
 		}
-		detailViewContent := ui.CreateRdsDetailView(selectedInstance)
-		a.pages.AddPage(ui.PageRdsDetail, detailViewContent, true, true)
+		a.currentDetailData = selectedInstance
+		detailView := ui.CreateInteractiveJSONDetailView(
+			fmt.Sprintf("RDS Details: %s", instanceId),
+			selectedInstance,
+			a.yankTracker,
+			func() {
+				// Copy callback
+				err := ui.CopyToClipboard(selectedInstance)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to copy to clipboard: %v", err))
+				} else {
+					a.showErrorModal("RDS instance details copied to clipboard!")
+				}
+			},
+			func() {
+				// Edit callback
+				err := ui.OpenInNvim(selectedInstance)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to open in nvim: %v", err))
+				}
+			},
+		)
+		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
+		a.pages.AddPage(ui.PageRdsDetail, detailViewWithInstructions, true, true)
 		// Extract the detail view from the flex container
-		if detailViewContent.GetItemCount() > 1 {
-			a.rdsDetailView = detailViewContent.GetItem(1).(*tview.TextView)
+		if detailViewWithInstructions.GetItemCount() > 1 {
+			a.rdsDetailView = detailViewWithInstructions.GetItem(1).(*tview.TextView)
 		}
 		a.tviewApp.SetFocus(a.rdsDetailView)
 	})
+
+	// Setup table yank functionality
+	a.setupTableYankFunctionality(a.rdsInstanceTable, a.allRDSInstances)
+
 	rdsListFlex := ui.WrapTableInFlex(a.rdsInstanceTable)
 	a.pages.AddPage(ui.PageRdsList, rdsListFlex, true, true)
 	a.tviewApp.SetFocus(a.rdsInstanceTable)

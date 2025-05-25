@@ -25,6 +25,50 @@ func CreateJSONDetailView(title string, data interface{}) *tview.TextView {
 	return textView
 }
 
+// CreateInteractiveJSONDetailView creates a JSON detail view with copy and edit functionality
+func CreateInteractiveJSONDetailView(title string, data interface{}, yankTracker *YankTracker, onCopy func(), onEdit func()) *tview.TextView {
+	jsonData, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		jsonData = []byte(fmt.Sprintf("Error marshaling JSON: %v", err))
+	}
+
+	textView := tview.NewTextView().
+		SetText(string(jsonData)).
+		SetScrollable(true).
+		SetWrap(false).
+		SetTextStyle(tcell.StyleDefault.Background(tcell.ColorReset))
+	textView.SetBorder(true).SetTitle(title).SetBackgroundColor(tcell.ColorReset)
+
+	// Enable mouse support for text selection
+	textView.SetMouseCapture(func(action tview.MouseAction, event *tcell.EventMouse) (tview.MouseAction, *tcell.EventMouse) {
+		// Allow default mouse handling for text selection
+		return action, event
+	})
+
+	// Set up key handling
+	textView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Rune() {
+		case 'y':
+			if yankTracker.HandleYankKey() {
+				// Double-y detected, copy to clipboard
+				if onCopy != nil {
+					onCopy()
+				}
+			}
+			return nil
+		case 'e':
+			// Open in nvim
+			if onEdit != nil {
+				onEdit()
+			}
+			return nil
+		}
+		return event
+	})
+
+	return textView
+}
+
 // SetupTableWithFixedWidth configures a table with full width
 func SetupTableWithFixedWidth(table *tview.Table) *tview.Table {
 	table.SetFixed(1, 0) // Fix header row, allow all columns to be flexible
@@ -86,7 +130,7 @@ func CreateDetailViewWithInstructions(detailView *tview.TextView) *tview.Flex {
 
 	// Instructions
 	instructions := tview.NewTextView().
-		SetText("Press 'Esc' or 'q' to go back, 'Q' to quit").
+		SetText("Press 'Esc' or 'q' to go back, 'Q' to quit, 'yy' to copy JSON, 'e' to edit in nvim").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true).
 		SetBackgroundColor(tcell.ColorReset)
@@ -116,5 +160,27 @@ func CreateModeLine(profileName string) *tview.TextView {
 // UpdateModeLine updates the mode line with new profile information
 func UpdateModeLine(modeLine *tview.TextView, profileName string) {
 	modeLineText := fmt.Sprintf(" Profile: %s | Press 'O' to switch profile ", profileName)
+	modeLine.SetText(modeLineText)
+}
+
+// UpdateModeLineWithPageInfo updates the mode line with profile and page information
+func UpdateModeLineWithPageInfo(modeLine *tview.TextView, profileName string, pageInfo string) {
+	// Calculate spacing to right-align page info
+	leftText := fmt.Sprintf(" Profile: %s | Press 'O' to switch profile ", profileName)
+
+	// Get terminal width (approximate)
+	width := 120 // Default width, will be adjusted dynamically
+
+	// Create spacing
+	spacingNeeded := width - len(leftText) - len(pageInfo) - 1
+	if spacingNeeded < 1 {
+		spacingNeeded = 1
+	}
+	spacing := ""
+	for i := 0; i < spacingNeeded; i++ {
+		spacing += " "
+	}
+
+	modeLineText := leftText + spacing + pageInfo
 	modeLine.SetText(modeLineText)
 }
