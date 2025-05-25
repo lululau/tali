@@ -26,24 +26,27 @@ type App struct {
 	services *Services
 
 	// UI components
-	mainMenu           *tview.List
-	ecsInstanceTable   *tview.Table
-	ecsDetailView      *tview.TextView
-	dnsDomainsTable    *tview.Table
-	dnsRecordsTable    *tview.Table
-	slbInstanceTable   *tview.Table
-	slbDetailView      *tview.TextView
-	ossBucketTable     *tview.Table
-	ossObjectTable     *tview.Table
-	ossDetailView      *tview.TextView
-	rdsInstanceTable   *tview.Table
-	rdsDetailView      *tview.TextView
-	rdsDatabaseTable   *tview.Table
-	rdsAccountTable    *tview.Table
-	redisInstanceTable *tview.Table
-	redisAccountTable  *tview.Table
-	modeLine           *tview.TextView
-	mainLayout         *tview.Flex // Keep for now, might remove if root structure changes significantly
+	mainMenu              *tview.List
+	ecsInstanceTable      *tview.Table
+	ecsDetailView         *tview.TextView
+	dnsDomainsTable       *tview.Table
+	dnsRecordsTable       *tview.Table
+	slbInstanceTable      *tview.Table
+	slbDetailView         *tview.TextView
+	ossBucketTable        *tview.Table
+	ossObjectTable        *tview.Table
+	ossDetailView         *tview.TextView
+	rdsInstanceTable      *tview.Table
+	rdsDetailView         *tview.TextView
+	rdsDatabaseTable      *tview.Table
+	rdsAccountTable       *tview.Table
+	redisInstanceTable    *tview.Table
+	redisAccountTable     *tview.Table
+	rocketmqInstanceTable *tview.Table
+	rocketmqTopicsTable   *tview.Table
+	rocketmqGroupsTable   *tview.Table
+	modeLine              *tview.TextView
+	mainLayout            *tview.Flex // Keep for now, might remove if root structure changes significantly
 
 	// Shared Search UI
 	searchBar           *tview.InputField
@@ -51,15 +54,17 @@ type App struct {
 	activeSearchHandler *ui.VimSearchHandler
 
 	// Data cache
-	allECSInstances        []ecs.Instance
-	allDomains             []alidns.DomainInDescribeDomains
-	allSLBInstances        []slb.LoadBalancer
-	allRDSInstances        []rds.DBInstance
-	allRedisInstances      []r_kvstore.KVStoreInstance
-	allOssBuckets          []oss.BucketProperties
-	currentBucketName      string
-	currentRdsInstanceId   string
-	currentRedisInstanceId string
+	allECSInstances           []ecs.Instance
+	allDomains                []alidns.DomainInDescribeDomains
+	allSLBInstances           []slb.LoadBalancer
+	allRDSInstances           []rds.DBInstance
+	allRedisInstances         []r_kvstore.KVStoreInstance
+	allRocketMQInstances      []service.RocketMQInstance
+	allOssBuckets             []oss.BucketProperties
+	currentBucketName         string
+	currentRdsInstanceId      string
+	currentRedisInstanceId    string
+	currentRocketMQInstanceId string
 
 	// OSS pagination state
 	ossCurrentMarker   string
@@ -78,12 +83,13 @@ type App struct {
 
 // Services holds all service instances
 type Services struct {
-	ECS   *service.ECSService
-	DNS   *service.DNSService
-	SLB   *service.SLBService
-	RDS   *service.RDSService
-	OSS   *service.OSSService
-	Redis *service.RedisService
+	ECS      *service.ECSService
+	DNS      *service.DNSService
+	SLB      *service.SLBService
+	RDS      *service.RDSService
+	OSS      *service.OSSService
+	Redis    *service.RedisService
+	RocketMQ *service.RocketMQService
 }
 
 // New creates a new application instance
@@ -115,12 +121,13 @@ func New() (*App, error) {
 
 	// Create services
 	services := &Services{
-		ECS:   service.NewECSService(clients.ECS),
-		DNS:   service.NewDNSService(clients.DNS),
-		SLB:   service.NewSLBService(clients.SLB),
-		RDS:   service.NewRDSService(clients.RDS),
-		OSS:   service.NewOSSServiceWithCredentials(clients.OSS, cfg.AccessKeyID, cfg.AccessKeySecret, cfg.OssEndpoint),
-		Redis: service.NewRedisService(clients.Redis),
+		ECS:      service.NewECSService(clients.ECS),
+		DNS:      service.NewDNSService(clients.DNS),
+		SLB:      service.NewSLBService(clients.SLB),
+		RDS:      service.NewRDSService(clients.RDS),
+		OSS:      service.NewOSSServiceWithCredentials(clients.OSS, cfg.AccessKeyID, cfg.AccessKeySecret, cfg.OssEndpoint),
+		Redis:    service.NewRedisService(clients.Redis),
+		RocketMQ: service.NewRocketMQService(clients.RocketMQ),
 	}
 
 	// Create tview app and pages
@@ -168,6 +175,7 @@ func (a *App) initializeUI() {
 		a.switchToOssBucketListView,
 		a.switchToRdsListView,
 		a.switchToRedisListView,
+		a.switchToRocketMQListView,
 		a.Stop,
 	)
 

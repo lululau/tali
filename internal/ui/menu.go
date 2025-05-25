@@ -13,6 +13,7 @@ func CreateMainMenu(
 	onOSS func(),
 	onRDS func(),
 	onRedis func(),
+	onRocketMQ func(),
 	onQuit func(),
 ) *tview.List {
 	list := tview.NewList().
@@ -22,6 +23,7 @@ func CreateMainMenu(
 		AddItem("OSS Management", "Browse OSS buckets and objects", 'o', onOSS).
 		AddItem("RDS Instances", "View RDS instances", 'r', onRDS).
 		AddItem("Redis Instances", "View Redis instances", 'i', onRedis).
+		AddItem("RocketMQ Instances", "View RocketMQ instances", 'm', onRocketMQ).
 		AddItem("Quit", "Exit the application (Press 'Q')", 'Q', onQuit)
 
 	list.SetBorder(true).SetTitle("Main Menu").SetBackgroundColor(tcell.ColorReset)

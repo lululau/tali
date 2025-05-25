@@ -60,7 +60,7 @@ func (a *App) setupGlobalInputCapture() {
 // handleEscapeKey handles escape key navigation
 func (a *App) handleEscapeKey(currentPageName string) {
 	switch currentPageName {
-	case ui.PageEcsList, ui.PageDnsDomains, ui.PageSlbList, ui.PageOssBuckets, ui.PageRdsList, ui.PageRedisList:
+	case ui.PageEcsList, ui.PageDnsDomains, ui.PageSlbList, ui.PageOssBuckets, ui.PageRdsList, ui.PageRedisList, ui.PageRocketMQList:
 		a.handleNavigation(ui.PageMainMenu, a.mainMenu)
 	case ui.PageEcsDetail:
 		a.handleNavigation(ui.PageEcsList, a.ecsInstanceTable)
@@ -89,6 +89,16 @@ func (a *App) handleEscapeKey(currentPageName string) {
 		a.handleNavigation(ui.PageRedisList, a.redisInstanceTable)
 	case "redisAccountDetail":
 		a.handleNavigation(ui.PageRedisAccounts, a.redisAccountTable)
+	case ui.PageRocketMQTopics:
+		a.handleNavigation(ui.PageRocketMQList, a.rocketmqInstanceTable)
+	case ui.PageRocketMQGroups:
+		a.handleNavigation(ui.PageRocketMQList, a.rocketmqInstanceTable)
+	case "rocketmqDetail":
+		a.handleNavigation(ui.PageRocketMQList, a.rocketmqInstanceTable)
+	case "rocketmqTopicDetail":
+		a.handleNavigation(ui.PageRocketMQTopics, a.rocketmqTopicsTable)
+	case "rocketmqGroupDetail":
+		a.handleNavigation(ui.PageRocketMQGroups, a.rocketmqGroupsTable)
 	}
 }
 
@@ -97,7 +107,7 @@ func (a *App) handleBackKey(currentPageName string) {
 	switch currentPageName {
 	case ui.PageMainMenu:
 		return
-	case ui.PageEcsList, ui.PageDnsDomains, ui.PageSlbList, ui.PageOssBuckets, ui.PageRdsList, ui.PageRedisList:
+	case ui.PageEcsList, ui.PageDnsDomains, ui.PageSlbList, ui.PageOssBuckets, ui.PageRdsList, ui.PageRedisList, ui.PageRocketMQList:
 		a.handleNavigation(ui.PageMainMenu, a.mainMenu)
 	case ui.PageEcsDetail:
 		a.handleNavigation(ui.PageEcsList, a.ecsInstanceTable)
@@ -126,6 +136,16 @@ func (a *App) handleBackKey(currentPageName string) {
 		a.handleNavigation(ui.PageRedisList, a.redisInstanceTable)
 	case "redisAccountDetail":
 		a.handleNavigation(ui.PageRedisAccounts, a.redisAccountTable)
+	case ui.PageRocketMQTopics:
+		a.handleNavigation(ui.PageRocketMQList, a.rocketmqInstanceTable)
+	case ui.PageRocketMQGroups:
+		a.handleNavigation(ui.PageRocketMQList, a.rocketmqInstanceTable)
+	case "rocketmqDetail":
+		a.handleNavigation(ui.PageRocketMQList, a.rocketmqInstanceTable)
+	case "rocketmqTopicDetail":
+		a.handleNavigation(ui.PageRocketMQTopics, a.rocketmqTopicsTable)
+	case "rocketmqGroupDetail":
+		a.handleNavigation(ui.PageRocketMQGroups, a.rocketmqGroupsTable)
 	}
 }
 
@@ -628,12 +648,13 @@ func (a *App) switchToProfile(profileName string) {
 
 	// Create new services with the new clients
 	newServices := &Services{
-		ECS:   service.NewECSService(newClients.ECS),
-		DNS:   service.NewDNSService(newClients.DNS),
-		SLB:   service.NewSLBService(newClients.SLB),
-		RDS:   service.NewRDSService(newClients.RDS),
-		OSS:   service.NewOSSServiceWithCredentials(newClients.OSS, cfg.AccessKeyID, cfg.AccessKeySecret, cfg.OssEndpoint),
-		Redis: service.NewRedisService(newClients.Redis),
+		ECS:      service.NewECSService(newClients.ECS),
+		DNS:      service.NewDNSService(newClients.DNS),
+		SLB:      service.NewSLBService(newClients.SLB),
+		RDS:      service.NewRDSService(newClients.RDS),
+		OSS:      service.NewOSSServiceWithCredentials(newClients.OSS, cfg.AccessKeyID, cfg.AccessKeySecret, cfg.OssEndpoint),
+		Redis:    service.NewRedisService(newClients.Redis),
+		RocketMQ: service.NewRocketMQService(newClients.RocketMQ),
 	}
 
 	// Update application state
@@ -662,10 +683,12 @@ func (a *App) clearCachedData() {
 	a.allSLBInstances = nil
 	a.allRDSInstances = nil
 	a.allRedisInstances = nil
+	a.allRocketMQInstances = nil
 	a.allOssBuckets = nil
 	a.currentBucketName = ""
 	a.currentRdsInstanceId = ""
 	a.currentRedisInstanceId = ""
+	a.currentRocketMQInstanceId = ""
 
 	// Reset OSS pagination state
 	a.ossCurrentMarker = ""
@@ -1013,4 +1036,210 @@ func (a *App) switchToRedisAccountsView(instanceId string) {
 	redisAccountListFlex := ui.WrapTableInFlex(a.redisAccountTable)
 	a.pages.AddPage(ui.PageRedisAccounts, redisAccountListFlex, true, true)
 	a.tviewApp.SetFocus(a.redisAccountTable)
+}
+
+// switchToRocketMQListView switches to RocketMQ list view
+func (a *App) switchToRocketMQListView() {
+	if a.allRocketMQInstances == nil {
+		instances, err := a.services.RocketMQ.FetchInstances()
+		if err != nil {
+			a.showErrorModal(fmt.Sprintf("Failed to fetch RocketMQ instances: %v", err))
+			return
+		}
+		a.allRocketMQInstances = instances
+	}
+
+	a.rocketmqInstanceTable = ui.CreateRocketMQListView(a.allRocketMQInstances)
+	searchHandler := ui.SetupTableNavigationWithSearch(a.rocketmqInstanceTable, a, func(row, col int) {
+		instanceId := a.rocketmqInstanceTable.GetCell(row, 0).GetReference().(string)
+		var selectedInstance interface{}
+		for _, inst := range a.allRocketMQInstances {
+			if inst.InstanceId == instanceId {
+				selectedInstance = inst
+				break
+			}
+		}
+		a.currentDetailData = selectedInstance
+		detailView, _ := ui.CreateInteractiveJSONDetailViewWithSearch(
+			fmt.Sprintf("RocketMQ Details: %s", instanceId),
+			selectedInstance,
+			a,
+			func() {
+				err := ui.CopyToClipboard(selectedInstance)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to copy: %v", err))
+				} else {
+					a.showErrorModal("Copied!")
+				}
+			},
+			func() {
+				err := ui.OpenInNvim(selectedInstance)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
+				}
+			},
+		)
+		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
+		a.pages.AddPage("rocketmqDetail", detailViewWithInstructions, true, true)
+		a.tviewApp.SetFocus(detailView)
+	})
+
+	a.setupTableYankFunctionality(a.rocketmqInstanceTable, a.allRocketMQInstances)
+	a.setupRocketMQKeyHandlers(a.rocketmqInstanceTable, searchHandler)
+
+	rocketmqListFlex := ui.WrapTableInFlex(a.rocketmqInstanceTable)
+	a.pages.AddPage(ui.PageRocketMQList, rocketmqListFlex, true, true)
+	a.tviewApp.SetFocus(a.rocketmqInstanceTable)
+}
+
+// setupRocketMQKeyHandlers sets up 'T' and 'G' keys for RocketMQ instance list
+func (a *App) setupRocketMQKeyHandlers(table *tview.Table, searchHandler *ui.VimSearchHandler) {
+	originalInputCapture := table.GetInputCapture()
+	table.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		// Check if the app-level search bar is active for the current handler
+		isCurrentHandlerSearchActive := false
+		if a.activeSearchHandler == searchHandler {
+			frontPage, _ := a.searchBarContainer.GetFrontPage()
+			if frontPage == "visible" { // "visible" is the page name for the search bar
+				isCurrentHandlerSearchActive = true
+			}
+		}
+
+		if isCurrentHandlerSearchActive {
+			switch event.Rune() {
+			case 'n', 'N', '/':
+				// Delegate to the app's shared search bar input capture
+				return a.searchBar.GetInputCapture()(event)
+			}
+		}
+
+		switch event.Rune() {
+		case 'T':
+			row, _ := table.GetSelection()
+			if row > 0 { // Skip header
+				cell := table.GetCell(row, 0)
+				if instanceId, ok := cell.GetReference().(string); ok {
+					a.switchToRocketMQTopicsView(instanceId)
+				}
+			}
+			return nil
+		case 'G':
+			row, _ := table.GetSelection()
+			if row > 0 { // Skip header
+				cell := table.GetCell(row, 0)
+				if instanceId, ok := cell.GetReference().(string); ok {
+					a.switchToRocketMQGroupsView(instanceId)
+				}
+			}
+			return nil
+		}
+		if originalInputCapture != nil {
+			return originalInputCapture(event)
+		}
+		return event
+	})
+}
+
+// switchToRocketMQTopicsView switches to RocketMQ topics view for a given instance
+func (a *App) switchToRocketMQTopicsView(instanceId string) {
+	topics, err := a.services.RocketMQ.FetchTopics(instanceId)
+	if err != nil {
+		a.showErrorModal(fmt.Sprintf("Failed to fetch topics for RocketMQ instance %s: %v", instanceId, err))
+		return
+	}
+
+	a.currentRocketMQInstanceId = instanceId
+	a.rocketmqTopicsTable = ui.CreateRocketMQTopicsListView(topics, instanceId)
+
+	ui.SetupTableNavigationWithSearch(a.rocketmqTopicsTable, a, func(row, col int) {
+		topicName := a.rocketmqTopicsTable.GetCell(row, 0).GetReference().(string)
+		var selectedTopic interface{}
+		for _, topic := range topics {
+			if topic.Topic == topicName {
+				selectedTopic = topic
+				break
+			}
+		}
+		a.currentDetailData = selectedTopic
+		detailView, _ := ui.CreateInteractiveJSONDetailViewWithSearch(
+			fmt.Sprintf("Topic Details: %s", topicName),
+			selectedTopic,
+			a,
+			func() {
+				err := ui.CopyToClipboard(selectedTopic)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to copy: %v", err))
+				} else {
+					a.showErrorModal("Copied!")
+				}
+			},
+			func() {
+				err := ui.OpenInNvim(selectedTopic)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
+				}
+			},
+		)
+		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
+		a.pages.AddPage("rocketmqTopicDetail", detailViewWithInstructions, true, true)
+		a.tviewApp.SetFocus(detailView)
+	})
+
+	a.setupTableYankFunctionality(a.rocketmqTopicsTable, topics)
+
+	rocketmqTopicsListFlex := ui.WrapTableInFlex(a.rocketmqTopicsTable)
+	a.pages.AddPage(ui.PageRocketMQTopics, rocketmqTopicsListFlex, true, true)
+	a.tviewApp.SetFocus(a.rocketmqTopicsTable)
+}
+
+// switchToRocketMQGroupsView switches to RocketMQ groups view for a given instance
+func (a *App) switchToRocketMQGroupsView(instanceId string) {
+	groups, err := a.services.RocketMQ.FetchGroups(instanceId)
+	if err != nil {
+		a.showErrorModal(fmt.Sprintf("Failed to fetch groups for RocketMQ instance %s: %v", instanceId, err))
+		return
+	}
+
+	a.currentRocketMQInstanceId = instanceId
+	a.rocketmqGroupsTable = ui.CreateRocketMQGroupsListView(groups, instanceId)
+
+	ui.SetupTableNavigationWithSearch(a.rocketmqGroupsTable, a, func(row, col int) {
+		groupId := a.rocketmqGroupsTable.GetCell(row, 0).GetReference().(string)
+		var selectedGroup interface{}
+		for _, group := range groups {
+			if group.GroupId == groupId {
+				selectedGroup = group
+				break
+			}
+		}
+		a.currentDetailData = selectedGroup
+		detailView, _ := ui.CreateInteractiveJSONDetailViewWithSearch(
+			fmt.Sprintf("Group Details: %s", groupId),
+			selectedGroup,
+			a,
+			func() {
+				err := ui.CopyToClipboard(selectedGroup)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to copy: %v", err))
+				} else {
+					a.showErrorModal("Copied!")
+				}
+			},
+			func() {
+				err := ui.OpenInNvim(selectedGroup)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
+				}
+			},
+		)
+		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
+		a.pages.AddPage("rocketmqGroupDetail", detailViewWithInstructions, true, true)
+		a.tviewApp.SetFocus(detailView)
+	})
+
+	a.setupTableYankFunctionality(a.rocketmqGroupsTable, groups)
+
+	rocketmqGroupsListFlex := ui.WrapTableInFlex(a.rocketmqGroupsTable)
+	a.pages.AddPage(ui.PageRocketMQGroups, rocketmqGroupsListFlex, true, true)
+	a.tviewApp.SetFocus(a.rocketmqGroupsTable)
 }

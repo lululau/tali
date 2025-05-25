@@ -3,6 +3,9 @@ package client
 import (
 	"fmt"
 
+	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
+	ons20190214 "github.com/alibabacloud-go/ons-20190214/v3/client"
+	"github.com/alibabacloud-go/tea/tea"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/alidns"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
 	r_kvstore "github.com/aliyun/alibaba-cloud-sdk-go/services/r-kvstore"
@@ -13,13 +16,14 @@ import (
 
 // AliyunClients holds all Aliyun service clients
 type AliyunClients struct {
-	ECS    *ecs.Client
-	DNS    *alidns.Client
-	SLB    *slb.Client
-	RDS    *rds.Client
-	OSS    *oss.Client
-	Redis  *r_kvstore.Client
-	config *Config
+	ECS      *ecs.Client
+	DNS      *alidns.Client
+	SLB      *slb.Client
+	RDS      *rds.Client
+	OSS      *oss.Client
+	Redis    *r_kvstore.Client
+	RocketMQ *ons20190214.Client
+	config   *Config
 }
 
 // Config represents the client configuration
@@ -75,6 +79,19 @@ func NewAliyunClients(cfg *Config) (*AliyunClients, error) {
 		return nil, fmt.Errorf("creating Redis client: %w", err)
 	}
 	clients.Redis = redisClient
+
+	// Initialize RocketMQ client using V2.0 SDK
+	rocketmqConfig := &openapi.Config{
+		AccessKeyId:     tea.String(cfg.AccessKeyID),
+		AccessKeySecret: tea.String(cfg.AccessKeySecret),
+		RegionId:        tea.String(cfg.RegionID),
+		Endpoint:        tea.String(fmt.Sprintf("ons.%s.aliyuncs.com", cfg.RegionID)),
+	}
+	rocketmqClient, err := ons20190214.NewClient(rocketmqConfig)
+	if err != nil {
+		return nil, fmt.Errorf("creating RocketMQ client: %w", err)
+	}
+	clients.RocketMQ = rocketmqClient
 
 	return clients, nil
 }
