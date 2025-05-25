@@ -131,8 +131,18 @@ func (s *OSSService) guessEndpointsFromError(errorMsg, bucketName string) []stri
 	return endpoints
 }
 
-// FetchObjects retrieves objects from a specific bucket using pagination
-func (s *OSSService) FetchObjects(bucketName string) ([]oss.ObjectProperties, error) {
+// ObjectListResult holds the result of a paginated object list query
+type ObjectListResult struct {
+	Objects     []oss.ObjectProperties
+	NextMarker  string
+	PrevMarker  string
+	IsTruncated bool
+	HasPrevious bool
+	CurrentPage int
+}
+
+// FetchObjects retrieves objects from a specific bucket with pagination
+func (s *OSSService) FetchObjects(bucketName string, marker string, pageSize int) (*ObjectListResult, error) {
 	// Get the appropriate client for this bucket
 	client, err := s.getClientForBucket(bucketName)
 	if err != nil {
@@ -144,24 +154,23 @@ func (s *OSSService) FetchObjects(bucketName string) ([]oss.ObjectProperties, er
 		return nil, fmt.Errorf("getting bucket %s: %w", bucketName, err)
 	}
 
-	var allObjects []oss.ObjectProperties
-	marker := ""
-	for {
-		options := []oss.Option{
-			oss.MaxKeys(100),
-			oss.Marker(marker),
-		}
-		result, err := bucket.ListObjects(options...)
-		if err != nil {
-			return nil, fmt.Errorf("listing objects in bucket %s (marker: %s): %w", bucketName, marker, err)
-		}
-
-		allObjects = append(allObjects, result.Objects...)
-
-		if !result.IsTruncated {
-			break
-		}
-		marker = result.NextMarker
+	options := []oss.Option{
+		oss.MaxKeys(pageSize),
 	}
-	return allObjects, nil
+	if marker != "" {
+		options = append(options, oss.Marker(marker))
+	}
+
+	result, err := bucket.ListObjects(options...)
+	if err != nil {
+		return nil, fmt.Errorf("listing objects in bucket %s (marker: %s): %w", bucketName, marker, err)
+	}
+
+	return &ObjectListResult{
+		Objects:     result.Objects,
+		NextMarker:  result.NextMarker,
+		PrevMarker:  marker, // Store the current marker as previous for backward navigation
+		IsTruncated: result.IsTruncated,
+		HasPrevious: marker != "", // If we have a marker, we can go back
+	}, nil
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
+	"aliyun-tui-viewer/internal/service"
 	"aliyun-tui-viewer/internal/ui"
 )
 
@@ -222,16 +223,42 @@ func (a *App) switchToOssBucketListView() {
 
 // switchToOssObjectListView switches to OSS object list view
 func (a *App) switchToOssObjectListView(bucketName string) {
-	objects, err := a.services.OSS.FetchObjects(bucketName)
+	// Initialize pagination state
+	a.currentBucketName = bucketName
+	a.ossCurrentMarker = ""
+	a.ossPreviousMarkers = []string{}
+	a.ossCurrentPage = 1
+	a.ossPageSize = 20 // Set page size to 20 objects per page
+	a.ossHasNextPage = false
+
+	// Load first page
+	a.loadOssObjectPage()
+}
+
+// loadOssObjectPage loads the current page of OSS objects
+func (a *App) loadOssObjectPage() {
+	result, err := a.services.OSS.FetchObjects(a.currentBucketName, a.ossCurrentMarker, a.ossPageSize)
 	if err != nil {
 		a.showErrorModal(err.Error())
 		return
 	}
-	a.ossObjectTable = ui.CreateOssObjectListView(objects, bucketName)
+
+	a.ossHasNextPage = result.IsTruncated
+	hasPrevious := len(a.ossPreviousMarkers) > 0
+
+	// Create paginated view
+	ossObjectView := ui.CreateOssObjectPaginatedView(result.Objects, a.currentBucketName, a.ossCurrentPage, a.ossHasNextPage, hasPrevious)
+
+	// Extract the table from the flex container for navigation setup
+	if ossObjectView.GetItemCount() > 0 {
+		a.ossObjectTable = ossObjectView.GetItem(0).(*tview.Table)
+	}
+
+	// Setup table navigation with object selection
 	ui.SetupTableNavigation(a.ossObjectTable, func(row, col int) {
 		objectKey := a.ossObjectTable.GetCell(row, 0).GetReference().(string)
 		// Find the object details
-		for _, obj := range objects {
+		for _, obj := range result.Objects {
 			if obj.Key == objectKey {
 				a.ossDetailView = ui.CreateJSONDetailView(fmt.Sprintf("Object Details: %s", objectKey), obj)
 				a.pages.AddPage("ossObjectDetail", a.ossDetailView, true, true)
@@ -240,9 +267,72 @@ func (a *App) switchToOssObjectListView(bucketName string) {
 			}
 		}
 	})
-	ossObjectListFlex := ui.WrapTableInFlex(a.ossObjectTable)
-	a.pages.AddPage(ui.PageOssObjects, ossObjectListFlex, true, true)
+
+	// Setup pagination navigation
+	a.setupOssPaginationNavigation(ossObjectView, result)
+
+	a.pages.AddPage(ui.PageOssObjects, ossObjectView, true, true)
 	a.tviewApp.SetFocus(a.ossObjectTable)
+}
+
+// setupOssPaginationNavigation sets up pagination key bindings
+func (a *App) setupOssPaginationNavigation(view *tview.Flex, result *service.ObjectListResult) {
+	view.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Rune() {
+		case ']': // Next page
+			if a.ossHasNextPage {
+				a.goToNextOssPage(result.NextMarker)
+			}
+			return nil
+		case '[': // Previous page
+			if len(a.ossPreviousMarkers) > 0 {
+				a.goToPrevOssPage()
+			}
+			return nil
+		case '0': // First page
+			a.goToFirstOssPage()
+			return nil
+		}
+		return event
+	})
+}
+
+// goToNextOssPage navigates to the next page
+func (a *App) goToNextOssPage(nextMarker string) {
+	if nextMarker == "" {
+		return
+	}
+
+	// Save current marker to previous markers stack
+	a.ossPreviousMarkers = append(a.ossPreviousMarkers, a.ossCurrentMarker)
+	a.ossCurrentMarker = nextMarker
+	a.ossCurrentPage++
+
+	a.loadOssObjectPage()
+}
+
+// goToPrevOssPage navigates to the previous page
+func (a *App) goToPrevOssPage() {
+	if len(a.ossPreviousMarkers) == 0 {
+		return
+	}
+
+	// Pop the last marker from the stack
+	lastIndex := len(a.ossPreviousMarkers) - 1
+	a.ossCurrentMarker = a.ossPreviousMarkers[lastIndex]
+	a.ossPreviousMarkers = a.ossPreviousMarkers[:lastIndex]
+	a.ossCurrentPage--
+
+	a.loadOssObjectPage()
+}
+
+// goToFirstOssPage navigates to the first page
+func (a *App) goToFirstOssPage() {
+	a.ossCurrentMarker = ""
+	a.ossPreviousMarkers = []string{}
+	a.ossCurrentPage = 1
+
+	a.loadOssObjectPage()
 }
 
 // switchToRdsListView switches to RDS list view

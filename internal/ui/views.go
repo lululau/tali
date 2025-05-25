@@ -174,6 +174,55 @@ func CreateOssObjectListView(objects []oss.ObjectProperties, bucketName string) 
 	return table
 }
 
+// CreateOssObjectPaginatedView creates OSS objects list view with pagination controls
+func CreateOssObjectPaginatedView(objects []oss.ObjectProperties, bucketName string, currentPage int, hasNext, hasPrev bool) *tview.Flex {
+	// Create the table
+	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)
+	table = SetupTableWithFixedWidth(table)
+	headers := []string{"Object Key", "Size (Bytes)", "Last Modified", "Storage Class", "ETag"}
+	CreateTableHeaders(table, headers)
+
+	if len(objects) == 0 {
+		table.SetCell(1, 0, tview.NewTableCell("No objects found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
+	} else {
+		for r, object := range objects {
+			table.SetCell(r+1, 0, tview.NewTableCell(object.Key).SetTextColor(tcell.ColorWhite).SetReference(object.Key).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(fmt.Sprintf("%d", object.Size)).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(object.LastModified.Format("2006-01-02 15:04:05")).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 3, tview.NewTableCell(object.StorageClass).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 4, tview.NewTableCell(object.ETag).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+		}
+	}
+
+	// Create pagination info
+	paginationInfo := ""
+	if hasPrev {
+		paginationInfo += "[ (Prev) "
+	}
+	paginationInfo += fmt.Sprintf("Page %d", currentPage)
+	if hasNext {
+		paginationInfo += " ] (Next)"
+	}
+	paginationInfo += " | Press '[' for previous, ']' for next, '0' for first page"
+
+	// Create pagination status bar
+	statusBar := tview.NewTextView().
+		SetText(paginationInfo).
+		SetTextAlign(tview.AlignCenter).
+		SetDynamicColors(true).
+		SetBackgroundColor(tcell.ColorReset)
+	statusBar.SetBorder(false)
+
+	// Create flex container
+	flex := tview.NewFlex().SetDirection(tview.FlexRow)
+	flex.AddItem(table, 0, 1, true)
+	flex.AddItem(statusBar, 1, 0, false)
+	flex.SetTitle(fmt.Sprintf("Objects in %s", bucketName)).SetBorder(true)
+	flex.SetBackgroundColor(tcell.ColorReset)
+
+	return flex
+}
+
 // CreateRdsListView creates RDS instances list view
 func CreateRdsListView(instances []rds.DBInstance) *tview.Table {
 	table := tview.NewTable().

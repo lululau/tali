@@ -45,6 +45,13 @@ type App struct {
 	allRDSInstances   []rds.DBInstance
 	allOssBuckets     []oss.BucketProperties
 	currentBucketName string
+
+	// OSS pagination state
+	ossCurrentMarker   string
+	ossPreviousMarkers []string // Stack to track previous markers for backward navigation
+	ossCurrentPage     int
+	ossPageSize        int
+	ossHasNextPage     bool
 }
 
 // Services holds all service instances
