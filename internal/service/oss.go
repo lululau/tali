@@ -16,26 +16,54 @@ func NewOSSService(client *oss.Client) *OSSService {
 	return &OSSService{client: client}
 }
 
-// FetchBuckets retrieves all OSS buckets
+// FetchBuckets retrieves all OSS buckets using pagination
 func (s *OSSService) FetchBuckets() ([]oss.BucketProperties, error) {
-	result, err := s.client.ListBuckets()
-	if err != nil {
-		return nil, fmt.Errorf("listing OSS buckets: %w", err)
+	var allBuckets []oss.BucketProperties
+	marker := ""
+	for {
+		options := []oss.Option{
+			oss.MaxKeys(100),
+			oss.Marker(marker),
+		}
+		result, err := s.client.ListBuckets(options...)
+		if err != nil {
+			return nil, fmt.Errorf("listing OSS buckets (marker: %s): %w", marker, err)
+		}
+		allBuckets = append(allBuckets, result.Buckets...)
+
+		if !result.IsTruncated {
+			break
+		}
+		marker = result.NextMarker
 	}
-	return result.Buckets, nil
+	return allBuckets, nil
 }
 
-// FetchObjects retrieves objects from a specific bucket
+// FetchObjects retrieves objects from a specific bucket using pagination
 func (s *OSSService) FetchObjects(bucketName string) ([]oss.ObjectProperties, error) {
 	bucket, err := s.client.Bucket(bucketName)
 	if err != nil {
 		return nil, fmt.Errorf("getting bucket %s: %w", bucketName, err)
 	}
 
-	result, err := bucket.ListObjects()
-	if err != nil {
-		return nil, fmt.Errorf("listing objects in bucket %s: %w", bucketName, err)
-	}
+	var allObjects []oss.ObjectProperties
+	marker := ""
+	for {
+		options := []oss.Option{
+			oss.MaxKeys(100),
+			oss.Marker(marker),
+		}
+		result, err := bucket.ListObjects(options...)
+		if err != nil {
+			return nil, fmt.Errorf("listing objects in bucket %s (marker: %s): %w", bucketName, marker, err)
+		}
 
-	return result.Objects, nil
+		allObjects = append(allObjects, result.Objects...)
+
+		if !result.IsTruncated {
+			break
+		}
+		marker = result.NextMarker
+	}
+	return allObjects, nil
 }

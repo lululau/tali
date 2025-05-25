@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 
+	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/slb"
 )
 
@@ -16,13 +17,34 @@ func NewSLBService(client *slb.Client) *SLBService {
 	return &SLBService{client: client}
 }
 
-// FetchInstances retrieves all SLB instances
+// FetchInstances retrieves all SLB instances using pagination
 func (s *SLBService) FetchInstances() ([]slb.LoadBalancer, error) {
-	request := slb.CreateDescribeLoadBalancersRequest()
-	request.Scheme = "https"
-	response, err := s.client.DescribeLoadBalancers(request)
-	if err != nil {
-		return nil, fmt.Errorf("describing SLB instances: %w", err)
+	var allLoadBalancers []slb.LoadBalancer
+	pageNumber := int64(1)
+	pageSize := int64(100)
+
+	for {
+		request := slb.CreateDescribeLoadBalancersRequest()
+		request.Scheme = "https"
+		request.PageNumber = requests.NewInteger(int(pageNumber))
+		request.PageSize = requests.NewInteger(int(pageSize))
+
+		response, err := s.client.DescribeLoadBalancers(request)
+		if err != nil {
+			return nil, fmt.Errorf("describing SLB instances (page %d): %w", pageNumber, err)
+		}
+
+		allLoadBalancers = append(allLoadBalancers, response.LoadBalancers.LoadBalancer...)
+
+		if pageNumber*pageSize >= int64(response.TotalCount) {
+			break
+		}
+
+		if len(response.LoadBalancers.LoadBalancer) < int(pageSize) {
+			break
+		}
+
+		pageNumber++
 	}
-	return response.LoadBalancers.LoadBalancer, nil
+	return allLoadBalancers, nil
 }
