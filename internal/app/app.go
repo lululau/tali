@@ -83,7 +83,7 @@ func New() (*App, error) {
 		DNS: service.NewDNSService(clients.DNS),
 		SLB: service.NewSLBService(clients.SLB),
 		RDS: service.NewRDSService(clients.RDS),
-		OSS: service.NewOSSService(clients.OSS),
+		OSS: service.NewOSSServiceWithCredentials(clients.OSS, cfg.AccessKeyID, cfg.AccessKeySecret, cfg.OssEndpoint),
 	}
 
 	// Create tview app and pages
