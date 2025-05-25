@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/user"
+	"path/filepath"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/alidns"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
@@ -43,6 +45,110 @@ var (
 	regionID        string
 	ossEndpoint     string
 )
+
+// --- Aliyun CLI Config Loading ---
+
+// ConfigProfile represents a single profile in the Aliyun CLI config
+type ConfigProfile struct {
+	Name            string `json:"name"`
+	Mode            string `json:"mode"`
+	AccessKeyID     string `json:"access_key_id"`
+	AccessKeySecret string `json:"access_key_secret"`
+	RegionID        string `json:"region_id"`
+	OssEndpoint     string `json:"oss_endpoint,omitempty"` // Custom field for OSS endpoint
+	// Other fields like output_format, language can be added if needed
+}
+
+// AliyunConfig represents the structure of ~/.aliyun/config.json
+type AliyunConfig struct {
+	Current  string          `json:"current"`
+	Profiles []ConfigProfile `json:"profiles"`
+}
+
+func loadAliyunConfig() (ak, sk, region, ossEp string, err error) {
+	usr, err := user.Current()
+	if err != nil {
+		err = fmt.Errorf("failed to get current user: %w", err)
+		return
+	}
+	configPath := filepath.Join(usr.HomeDir, ".aliyun", "config.json")
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		err = fmt.Errorf("failed to read aliyun config file at %s: %w", configPath, err)
+		return
+	}
+
+	var config AliyunConfig
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		err = fmt.Errorf("failed to parse aliyun config file %s: %w", configPath, err)
+		return
+	}
+
+	if len(config.Profiles) == 0 {
+		err = fmt.Errorf("no profiles found in aliyun config file: %s", configPath)
+		return
+	}
+
+	activeProfileName := config.Current
+	if activeProfileName == "" {
+		if len(config.Profiles) == 1 {
+			activeProfileName = config.Profiles[0].Name
+		} else {
+			for _, p := range config.Profiles {
+				if p.Name == "default" {
+					activeProfileName = "default"
+					break
+				}
+			}
+			if activeProfileName == "" { // If no "default" profile and current is not set
+				err = fmt.Errorf("no current profile specified in %s, and no 'default' profile found. Please specify a current profile or name one 'default'", configPath)
+				return
+			}
+		}
+	}
+
+	var activeProfile *ConfigProfile
+	for i := range config.Profiles {
+		if config.Profiles[i].Name == activeProfileName {
+			activeProfile = &config.Profiles[i]
+			break
+		}
+	}
+
+	if activeProfile == nil {
+		err = fmt.Errorf("current profile '%s' not found in aliyun config file: %s", activeProfileName, configPath)
+		return
+	}
+
+	if activeProfile.AccessKeyID == "" || activeProfile.AccessKeySecret == "" || activeProfile.RegionID == "" {
+		err = fmt.Errorf("profile '%s' in %s is missing access_key_id, access_key_secret, or region_id", activeProfile.Name, configPath)
+		return
+	}
+
+	ak = activeProfile.AccessKeyID
+	sk = activeProfile.AccessKeySecret
+	region = activeProfile.RegionID
+
+	// Resolve OSS Endpoint
+	if activeProfile.OssEndpoint != "" {
+		ossEp = activeProfile.OssEndpoint
+	} else if activeProfile.RegionID != "" { // If profile.OssEndpoint is missing, construct from profile.RegionID
+		ossEp = fmt.Sprintf("oss-%s.aliyuncs.com", activeProfile.RegionID)
+	}
+
+	if ossEp == "" {
+		err = fmt.Errorf("OSS endpoint could not be determined for profile '%s'. "+
+			"Please either set 'oss_endpoint' in your profile in %s, "+
+			"or ensure 'region_id' is set for default construction (e.g., oss-<region_id>.aliyuncs.com)",
+			activeProfile.Name, configPath)
+		return
+	}
+	return
+}
+
+// --- End Aliyun CLI Config Loading ---
 
 const (
 	pageMainMenu   = "mainMenu"
@@ -708,13 +814,10 @@ func showErrorModal(message string) {
 }
 
 func main() {
-	accessKeyID = os.Getenv("ALIBABA_CLOUD_ACCESS_KEY_ID")
-	accessKeySecret = os.Getenv("ALIBABA_CLOUD_ACCESS_KEY_SECRET")
-	regionID = os.Getenv("ALIBABA_CLOUD_REGION_ID")
-	ossEndpoint = os.Getenv("ALIBABA_CLOUD_OSS_ENDPOINT")
-
-	if accessKeyID == "" || accessKeySecret == "" || regionID == "" || ossEndpoint == "" {
-		fmt.Println("Error: ALIBABA_CLOUD_ACCESS_KEY_ID, ALIBABA_CLOUD_ACCESS_KEY_SECRET, ALIBABA_CLOUD_REGION_ID, and ALIBABA_CLOUD_OSS_ENDPOINT environment variables must be set.")
+	var err error
+	accessKeyID, accessKeySecret, regionID, ossEndpoint, err = loadAliyunConfig()
+	if err != nil {
+		fmt.Printf("Error loading Aliyun CLI config: %v\n", err)
 		os.Exit(1)
 	}
 
