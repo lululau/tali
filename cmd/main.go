@@ -181,7 +181,20 @@ func createMainMenu() *tview.List {
 			switchToRdsListView()
 		}).
 		AddItem("Quit", "Exit the application (Press 'Q')", 'Q', func() { app.Stop() })
-	list.SetBorder(true).SetTitle("Main Menu").SetBackgroundColor(tcell.ColorDefault)
+	list.SetBorder(true).SetTitle("Main Menu").SetBackgroundColor(tcell.ColorReset)
+
+	// Set text colors with transparent background
+	list.SetMainTextStyle(tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorReset))
+	list.SetSecondaryTextStyle(tcell.StyleDefault.Foreground(tcell.ColorGray).Background(tcell.ColorReset))
+	list.SetShortcutStyle(tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorReset))
+	list.SetSelectedTextColor(tcell.ColorYellow)
+	list.SetSelectedBackgroundColor(tcell.ColorReset)
+
+	// Disable full line highlighting to make unselected items transparent
+	list.SetHighlightFullLine(false)
+
+	// Force transparent background for all text
+	list.SetBackgroundColor(tcell.ColorReset)
 
 	// Add j/k navigation support for main menu
 	list.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -218,8 +231,9 @@ func createJSONDetailView(title string, data interface{}) *tview.TextView {
 	textView := tview.NewTextView().
 		SetText(string(jsonData)).
 		SetScrollable(true).
-		SetWrap(false)
-	textView.SetBorder(true).SetTitle(title).SetBackgroundColor(tcell.ColorDefault)
+		SetWrap(false).
+		SetTextStyle(tcell.StyleDefault.Background(tcell.ColorReset))
+	textView.SetBorder(true).SetTitle(title).SetBackgroundColor(tcell.ColorReset)
 
 	return textView
 }
@@ -304,12 +318,12 @@ func createEcsDetailView(instance ecs.Instance) *tview.Flex {
 		SetText("Press 'Esc' or 'q' to go back, 'Q' to quit").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true).
-		SetBackgroundColor(tcell.ColorDefault)
+		SetBackgroundColor(tcell.ColorReset)
 	instructions.SetBorder(false)
 
 	flex.AddItem(instructions, 1, 0, false)
 	flex.AddItem(ecsDetailView, 0, 1, true)
-	flex.SetBackgroundColor(tcell.ColorDefault)
+	flex.SetBackgroundColor(tcell.ColorReset)
 
 	return flex
 }
@@ -386,12 +400,12 @@ func createSlbDetailView(lb slb.LoadBalancer) *tview.Flex {
 		SetText("Press 'Esc' or 'q' to go back, 'Q' to quit").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true).
-		SetBackgroundColor(tcell.ColorDefault)
+		SetBackgroundColor(tcell.ColorReset)
 	instructions.SetBorder(false)
 
 	flex.AddItem(instructions, 1, 0, false)
 	flex.AddItem(slbDetailView, 0, 1, true)
-	flex.SetBackgroundColor(tcell.ColorDefault)
+	flex.SetBackgroundColor(tcell.ColorReset)
 
 	return flex
 }
@@ -474,12 +488,12 @@ func createRdsDetailView(instance rds.DBInstance) *tview.Flex {
 		SetText("Press 'Esc' or 'q' to go back, 'Q' to quit").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true).
-		SetBackgroundColor(tcell.ColorDefault)
+		SetBackgroundColor(tcell.ColorReset)
 	instructions.SetBorder(false)
 
 	flex.AddItem(instructions, 1, 0, false)
 	flex.AddItem(rdsDetailView, 0, 1, true)
-	flex.SetBackgroundColor(tcell.ColorDefault)
+	flex.SetBackgroundColor(tcell.ColorReset)
 
 	return flex
 }
@@ -706,7 +720,7 @@ func main() {
 
 	app = tview.NewApplication()
 	pages = tview.NewPages()
-	pages.SetBackgroundColor(tcell.ColorDefault)
+	pages.SetBackgroundColor(tcell.ColorReset)
 
 	mainMenu = createMainMenu()
 	pages.AddPage(pageMainMenu, mainMenu, true, true)
