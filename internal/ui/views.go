@@ -37,6 +37,8 @@ func CreateEcsListView(instances []ecs.Instance) *tview.Table {
 			publicIP := "N/A"
 			if len(instance.PublicIpAddress.IpAddress) > 0 {
 				publicIP = instance.PublicIpAddress.IpAddress[0]
+			} else if instance.EipAddress.IpAddress != "" {
+				publicIP = instance.EipAddress.IpAddress
 			}
 
 			// CPU/RAM configuration
