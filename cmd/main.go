@@ -1,15 +1,15 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
-	// "github.com/aliyun/aliyun-oss-go-sdk/oss" // STUBBED: Go version compatibility issue
-
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/alidns"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
-	"github.com/aliyun/alibaba-cloud-sdk-go/services/rds" // Added RDS
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/rds"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/slb"
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -20,22 +20,23 @@ var (
 	pages            *tview.Pages
 	mainMenu         *tview.List
 	ecsInstanceTable *tview.Table
-	ecsDetailForm    *tview.Form
+	ecsDetailView    *tview.TextView
 	dnsDomainsTable  *tview.Table
 	dnsRecordsTable  *tview.Table
 	slbInstanceTable *tview.Table
-	slbDetailForm    *tview.Form
+	slbDetailView    *tview.TextView
 	ossBucketTable   *tview.Table
 	ossObjectTable   *tview.Table
-	rdsInstanceTable *tview.Table // For RDS list
-	rdsDetailForm    *tview.Form  // Specific for RDS details
+	ossDetailView    *tview.TextView
+	rdsInstanceTable *tview.Table
+	rdsDetailView    *tview.TextView
 
-	allECSInstances []ecs.Instance
-	allDomains      []alidns.DomainInDescribeDomains
-	allSLBInstances []slb.LoadBalancer
-	allRDSInstances []rds.DBInstance // To store RDS instances
-	// allOssBuckets   []StubBucketInfo // STUBBED
-	// currentBucketName string       // STUBBED
+	allECSInstances   []ecs.Instance
+	allDomains        []alidns.DomainInDescribeDomains
+	allSLBInstances   []slb.LoadBalancer
+	allRDSInstances   []rds.DBInstance
+	allOssBuckets     []oss.BucketProperties
+	currentBucketName string
 
 	accessKeyID     string
 	accessKeySecret string
@@ -57,19 +58,38 @@ const (
 	pageRdsDetail  = "rdsDetail" // New page for RDS detail
 )
 
-// --- SDK Stubs for OSS ---
-type StubBucketInfo struct{ Name, Location, CreationDate, StorageClass string }
-type StubObjectInfo struct {
-	Key                        string
-	Size                       int64
-	LastModified, StorageClass string
+// --- OSS SDK Functions ---
+func fetchOssBuckets() ([]oss.BucketProperties, error) {
+	client, err := oss.New(ossEndpoint, accessKeyID, accessKeySecret)
+	if err != nil {
+		return nil, fmt.Errorf("creating OSS client: %w", err)
+	}
+
+	result, err := client.ListBuckets()
+	if err != nil {
+		return nil, fmt.Errorf("listing OSS buckets: %w", err)
+	}
+
+	return result.Buckets, nil
 }
 
-func fetchOssBuckets() ([]StubBucketInfo, error) { /* STUBBED */
-	return []StubBucketInfo{{Name: "stub-bucket-1", Location: "oss-cn-hangzhou"}}, nil
-}
-func fetchOssObjects(bucketName string) ([]StubObjectInfo, error) { /* STUBBED */
-	return []StubObjectInfo{{Key: "stub-object.txt", Size: 123}}, nil
+func fetchOssObjects(bucketName string) ([]oss.ObjectProperties, error) {
+	client, err := oss.New(ossEndpoint, accessKeyID, accessKeySecret)
+	if err != nil {
+		return nil, fmt.Errorf("creating OSS client: %w", err)
+	}
+
+	bucket, err := client.Bucket(bucketName)
+	if err != nil {
+		return nil, fmt.Errorf("getting bucket %s: %w", bucketName, err)
+	}
+
+	result, err := bucket.ListObjects()
+	if err != nil {
+		return nil, fmt.Errorf("listing objects in bucket %s: %w", bucketName, err)
+	}
+
+	return result.Objects, nil
 }
 
 // --- ECS SDK Functions ---
@@ -156,26 +176,44 @@ func createMainMenu() *tview.List {
 		AddItem("ECS Instances", "View ECS instances", '1', func() { switchToEcsListView() }).
 		AddItem("DNS Management", "View AliDNS domains and records", '2', func() { switchToDnsDomainsListView() }).
 		AddItem("SLB Instances", "View SLB instances", '3', func() { switchToSlbListView() }).
-		AddItem("OSS Management", "Browse OSS buckets (STUBBED)", '4', func() { switchToOssBucketListView() }).
+		AddItem("OSS Management", "Browse OSS buckets and objects", '4', func() { switchToOssBucketListView() }).
 		AddItem("RDS Instances", "View RDS instances", '5', func() { // Added RDS
 			switchToRdsListView()
 		}).
-		AddItem("Quit", "Exit the application", 'q', func() { app.Stop() })
+		AddItem("Quit", "Exit the application (Press 'Q')", 'Q', func() { app.Stop() })
 	list.SetBorder(true).SetTitle("Main Menu")
 	return list
 }
 
-// Generic helper for adding items to a detail form
-func addFormItem(form *tview.Form, label, value string) {
-	form.AddTextView(label, value, 0, 1, true, false)
+// Generic helper for creating JSON detail view
+func createJSONDetailView(title string, data interface{}) *tview.TextView {
+	jsonData, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		jsonData = []byte(fmt.Sprintf("Error marshaling JSON: %v", err))
+	}
+
+	textView := tview.NewTextView().
+		SetText(string(jsonData)).
+		SetScrollable(true).
+		SetWrap(false)
+	textView.SetBorder(true).SetTitle(title)
+
+	return textView
 }
 
-// ECS List View (no changes)
+// Generic helper for setting up table with fixed width
+func setupTableWithFixedWidth(table *tview.Table) *tview.Table {
+	table.SetFixed(1, 0) // Fix header row, allow all columns to be flexible
+	return table
+}
+
+// ECS List View with enhanced information
 func createEcsListView(instances []ecs.Instance) *tview.Table {
 	table := tview.NewTable().
 		SetBorders(true).
 		SetSelectable(true, false)
-	headers := []string{"Instance ID", "Status", "IP Address", "Name"}
+	table = setupTableWithFixedWidth(table)
+	headers := []string{"Instance ID", "Status", "Zone", "CPU/RAM", "Private IP", "Public IP", "Name"}
 	for c, header := range headers {
 		table.SetCell(0, c, tview.NewTableCell(header).SetTextColor(tcell.ColorYellow).SetAlign(tview.AlignCenter).SetSelectable(false))
 	}
@@ -183,44 +221,59 @@ func createEcsListView(instances []ecs.Instance) *tview.Table {
 		table.SetCell(1, 0, tview.NewTableCell("No ECS instances found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
 	} else {
 		for r, instance := range instances {
-			ipAddress := "N/A"
+			// Private IP
+			privateIP := "N/A"
 			if len(instance.VpcAttributes.PrivateIpAddress.IpAddress) > 0 {
-				ipAddress = instance.VpcAttributes.PrivateIpAddress.IpAddress[0]
+				privateIP = instance.VpcAttributes.PrivateIpAddress.IpAddress[0]
 			} else if len(instance.InnerIpAddress.IpAddress) > 0 {
-				ipAddress = instance.InnerIpAddress.IpAddress[0]
-			} else if len(instance.PublicIpAddress.IpAddress) > 0 {
-				ipAddress = instance.PublicIpAddress.IpAddress[0]
+				privateIP = instance.InnerIpAddress.IpAddress[0]
 			}
+
+			// Public IP
+			publicIP := "N/A"
+			if len(instance.PublicIpAddress.IpAddress) > 0 {
+				publicIP = instance.PublicIpAddress.IpAddress[0]
+			}
+
+			// CPU/RAM configuration
+			cpuRam := fmt.Sprintf("%dC/%dG", instance.Cpu, instance.Memory/1024)
+
 			table.SetCell(r+1, 0, tview.NewTableCell(instance.InstanceId).SetTextColor(tcell.ColorWhite).SetReference(instance.InstanceId))
 			table.SetCell(r+1, 1, tview.NewTableCell(instance.Status).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 2, tview.NewTableCell(ipAddress).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 3, tview.NewTableCell(instance.InstanceName).SetTextColor(tcell.ColorWhite))
+			table.SetCell(r+1, 2, tview.NewTableCell(instance.ZoneId).SetTextColor(tcell.ColorWhite))
+			table.SetCell(r+1, 3, tview.NewTableCell(cpuRam).SetTextColor(tcell.ColorWhite))
+			table.SetCell(r+1, 4, tview.NewTableCell(privateIP).SetTextColor(tcell.ColorWhite))
+			table.SetCell(r+1, 5, tview.NewTableCell(publicIP).SetTextColor(tcell.ColorWhite))
+			table.SetCell(r+1, 6, tview.NewTableCell(instance.InstanceName).SetTextColor(tcell.ColorWhite))
 		}
 	}
 	return table
 }
 
-// ECS Detail View (no changes)
+// ECS Detail View in JSON format
 func createEcsDetailView(instance ecs.Instance) *tview.Flex {
-	ecsDetailForm = tview.NewForm()
-	ecsDetailForm.SetBorder(true).SetTitle(fmt.Sprintf("ECS Details: %s", instance.InstanceId)).SetTitleAlign(tview.AlignLeft)
-	ecsDetailForm.Clear(true)
-	addFormItem(ecsDetailForm, "Instance ID:", instance.InstanceId)
-	addFormItem(ecsDetailForm, "Instance Name:", instance.InstanceName)
-	addFormItem(ecsDetailForm, "Status:", instance.Status)
-	addFormItem(ecsDetailForm, "Region ID:", instance.RegionId)
-	addFormItem(ecsDetailForm, "Zone ID:", instance.ZoneId)
-	// ... (rest of ECS details - simplified for brevity in this combined file)
-	ecsDetailForm.AddButton("Back (Esc or q)", func() {
-		pages.SwitchToPage(pageEcsList)
-		app.SetFocus(ecsInstanceTable)
-	})
-	return tview.NewFlex().AddItem(ecsDetailForm, 0, 1, true)
+	ecsDetailView = createJSONDetailView(fmt.Sprintf("ECS Details: %s", instance.InstanceId), instance)
+
+	// Add navigation instructions
+	flex := tview.NewFlex().SetDirection(tview.FlexRow)
+
+	// Instructions
+	instructions := tview.NewTextView().
+		SetText("Press 'Esc' or 'q' to go back, 'Q' to quit").
+		SetTextAlign(tview.AlignCenter).
+		SetDynamicColors(true)
+	instructions.SetBorder(false)
+
+	flex.AddItem(instructions, 1, 0, false)
+	flex.AddItem(ecsDetailView, 0, 1, true)
+
+	return flex
 }
 
-// DNS Domains List View (no changes)
+// DNS Domains List View
 func createDnsDomainsListView(domains []alidns.DomainInDescribeDomains) *tview.Table {
 	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)
+	table = setupTableWithFixedWidth(table)
 	headers := []string{"Domain Name", "Record Count", "Version Code"}
 	for c, header := range headers {
 		table.SetCell(0, c, tview.NewTableCell(header).SetTextColor(tcell.ColorYellow).SetAlign(tview.AlignCenter).SetSelectable(false))
@@ -240,6 +293,7 @@ func createDnsDomainsListView(domains []alidns.DomainInDescribeDomains) *tview.T
 // DNS Records List View
 func createDnsRecordsListView(records []alidns.Record, domainName string) *tview.Table {
 	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)
+	table = setupTableWithFixedWidth(table)
 	headers := []string{"Record ID", "RR", "Type", "Value", "TTL", "Status"}
 	for c, header := range headers {
 		table.SetCell(0, c, tview.NewTableCell(header).SetTextColor(tcell.ColorYellow).SetAlign(tview.AlignCenter).SetSelectable(false))
@@ -263,6 +317,7 @@ func createDnsRecordsListView(records []alidns.Record, domainName string) *tview
 // SLB List View
 func createSlbListView(slbs []slb.LoadBalancer) *tview.Table {
 	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)
+	table = setupTableWithFixedWidth(table)
 	headers := []string{"SLB ID", "Name", "IP Address", "Type", "Status"}
 	for c, header := range headers {
 		table.SetCell(0, c, tview.NewTableCell(header).SetTextColor(tcell.ColorYellow).SetAlign(tview.AlignCenter).SetSelectable(false))
@@ -281,23 +336,30 @@ func createSlbListView(slbs []slb.LoadBalancer) *tview.Table {
 	return table
 }
 
-// SLB Detail View (no changes)
+// SLB Detail View in JSON format
 func createSlbDetailView(lb slb.LoadBalancer) *tview.Flex {
-	slbDetailForm = tview.NewForm()
-	slbDetailForm.SetBorder(true).SetTitle(fmt.Sprintf("SLB Details: %s", lb.LoadBalancerId)).SetTitleAlign(tview.AlignLeft)
-	slbDetailForm.Clear(true)
-	addFormItem(slbDetailForm, "SLB ID:", lb.LoadBalancerId)
-	// ... (rest of SLB details)
-	slbDetailForm.AddButton("Back (Esc or q)", func() {
-		pages.SwitchToPage(pageSlbList)
-		app.SetFocus(slbInstanceTable)
-	})
-	return tview.NewFlex().AddItem(slbDetailForm, 0, 1, true)
+	slbDetailView = createJSONDetailView(fmt.Sprintf("SLB Details: %s", lb.LoadBalancerId), lb)
+
+	// Add navigation instructions
+	flex := tview.NewFlex().SetDirection(tview.FlexRow)
+
+	// Instructions
+	instructions := tview.NewTextView().
+		SetText("Press 'Esc' or 'q' to go back, 'Q' to quit").
+		SetTextAlign(tview.AlignCenter).
+		SetDynamicColors(true)
+	instructions.SetBorder(false)
+
+	flex.AddItem(instructions, 1, 0, false)
+	flex.AddItem(slbDetailView, 0, 1, true)
+
+	return flex
 }
 
-// OSS Bucket List View (STUBBED)
-func createOssBucketListView(buckets []StubBucketInfo) *tview.Table {
+// OSS Bucket List View
+func createOssBucketListView(buckets []oss.BucketProperties) *tview.Table {
 	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)
+	table = setupTableWithFixedWidth(table)
 	headers := []string{"Bucket Name", "Location", "Creation Date", "Storage Class"}
 	for c, header := range headers {
 		table.SetCell(0, c, tview.NewTableCell(header).SetTextColor(tcell.ColorYellow).SetAlign(tview.AlignCenter).SetSelectable(false))
@@ -308,18 +370,19 @@ func createOssBucketListView(buckets []StubBucketInfo) *tview.Table {
 		for r, bucket := range buckets {
 			table.SetCell(r+1, 0, tview.NewTableCell(bucket.Name).SetTextColor(tcell.ColorWhite).SetReference(bucket.Name))
 			table.SetCell(r+1, 1, tview.NewTableCell(bucket.Location).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 2, tview.NewTableCell(bucket.CreationDate).SetTextColor(tcell.ColorWhite))
+			table.SetCell(r+1, 2, tview.NewTableCell(bucket.CreationDate.Format("2006-01-02 15:04:05")).SetTextColor(tcell.ColorWhite))
 			table.SetCell(r+1, 3, tview.NewTableCell(bucket.StorageClass).SetTextColor(tcell.ColorWhite))
 		}
 	}
-	table.SetTitle("OSS Buckets (SDK STUBBED)").SetBorder(true)
+	table.SetTitle("OSS Buckets").SetBorder(true)
 	return table
 }
 
-// OSS Object List View (STUBBED)
-func createOssObjectListView(objects []StubObjectInfo, bucketName string) *tview.Table {
+// OSS Object List View
+func createOssObjectListView(objects []oss.ObjectProperties, bucketName string) *tview.Table {
 	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)
-	headers := []string{"Object Key", "Size (Bytes)", "Last Modified", "Storage Class"}
+	table = setupTableWithFixedWidth(table)
+	headers := []string{"Object Key", "Size (Bytes)", "Last Modified", "Storage Class", "ETag"}
 	for c, header := range headers {
 		table.SetCell(0, c, tview.NewTableCell(header).SetTextColor(tcell.ColorYellow).SetAlign(tview.AlignCenter).SetSelectable(false))
 	}
@@ -327,13 +390,14 @@ func createOssObjectListView(objects []StubObjectInfo, bucketName string) *tview
 		table.SetCell(1, 0, tview.NewTableCell("No objects found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
 	} else {
 		for r, object := range objects {
-			table.SetCell(r+1, 0, tview.NewTableCell(object.Key).SetTextColor(tcell.ColorWhite))
+			table.SetCell(r+1, 0, tview.NewTableCell(object.Key).SetTextColor(tcell.ColorWhite).SetReference(object.Key))
 			table.SetCell(r+1, 1, tview.NewTableCell(fmt.Sprintf("%d", object.Size)).SetTextColor(tcell.ColorWhite))
-			table.SetCell(r+1, 2, tview.NewTableCell(object.LastModified).SetTextColor(tcell.ColorWhite))
+			table.SetCell(r+1, 2, tview.NewTableCell(object.LastModified.Format("2006-01-02 15:04:05")).SetTextColor(tcell.ColorWhite))
 			table.SetCell(r+1, 3, tview.NewTableCell(object.StorageClass).SetTextColor(tcell.ColorWhite))
+			table.SetCell(r+1, 4, tview.NewTableCell(object.ETag).SetTextColor(tcell.ColorWhite))
 		}
 	}
-	table.SetTitle(fmt.Sprintf("Objects in %s (SDK STUBBED)", bucketName)).SetBorder(true)
+	table.SetTitle(fmt.Sprintf("Objects in %s", bucketName)).SetBorder(true)
 	return table
 }
 
@@ -342,6 +406,7 @@ func createRdsListView(instances []rds.DBInstance) *tview.Table {
 	table := tview.NewTable().
 		SetBorders(true).
 		SetSelectable(true, false)
+	table = setupTableWithFixedWidth(table)
 
 	headers := []string{"Instance ID", "Engine", "Version", "Class", "Status", "Description"}
 	for c, header := range headers {
@@ -363,35 +428,24 @@ func createRdsListView(instances []rds.DBInstance) *tview.Table {
 	return table
 }
 
-// RDS Detail View
+// RDS Detail View in JSON format
 func createRdsDetailView(instance rds.DBInstance) *tview.Flex {
-	rdsDetailForm = tview.NewForm()
-	rdsDetailForm.SetBorder(true).SetTitle(fmt.Sprintf("RDS Details: %s", instance.DBInstanceId)).SetTitleAlign(tview.AlignLeft)
-	rdsDetailForm.Clear(true)
+	rdsDetailView = createJSONDetailView(fmt.Sprintf("RDS Details: %s", instance.DBInstanceId), instance)
 
-	addFormItem(rdsDetailForm, "Instance ID:", instance.DBInstanceId)
-	addFormItem(rdsDetailForm, "Description:", instance.DBInstanceDescription)
-	addFormItem(rdsDetailForm, "Status:", instance.DBInstanceStatus)
-	addFormItem(rdsDetailForm, "Engine:", instance.Engine)
-	addFormItem(rdsDetailForm, "Engine Version:", instance.EngineVersion)
-	addFormItem(rdsDetailForm, "Instance Class:", instance.DBInstanceClass)
-	addFormItem(rdsDetailForm, "Storage Type:", instance.DBInstanceStorageType)
-	addFormItem(rdsDetailForm, "Connection String:", instance.ConnectionString)
-	addFormItem(rdsDetailForm, "Network Type:", instance.InstanceNetworkType) // VPC or Classic
-	addFormItem(rdsDetailForm, "VPC ID:", instance.VpcId)
-	// addFormItem(rdsDetailForm, "VSwitch ID:", instance.VSwitchId) // Not directly in DBInstance, might need DescribeDBInstanceAttribute
-	addFormItem(rdsDetailForm, "Region ID:", instance.RegionId)
-	addFormItem(rdsDetailForm, "Zone ID:", instance.ZoneId)
-	addFormItem(rdsDetailForm, "Creation Time:", instance.CreateTime)
-	addFormItem(rdsDetailForm, "Expire Time:", instance.ExpireTime)
-	addFormItem(rdsDetailForm, "Lock Mode:", instance.LockMode)
-	addFormItem(rdsDetailForm, "Pay Type:", instance.PayType)
+	// Add navigation instructions
+	flex := tview.NewFlex().SetDirection(tview.FlexRow)
 
-	rdsDetailForm.AddButton("Back (Esc or q)", func() {
-		pages.SwitchToPage(pageRdsList)
-		app.SetFocus(rdsInstanceTable)
-	})
-	return tview.NewFlex().AddItem(rdsDetailForm, 0, 1, true)
+	// Instructions
+	instructions := tview.NewTextView().
+		SetText("Press 'Esc' or 'q' to go back, 'Q' to quit").
+		SetTextAlign(tview.AlignCenter).
+		SetDynamicColors(true)
+	instructions.SetBorder(false)
+
+	flex.AddItem(instructions, 1, 0, false)
+	flex.AddItem(rdsDetailView, 0, 1, true)
+
+	return flex
 }
 
 // --- Page Switching Functions ---
@@ -415,7 +469,7 @@ func switchToEcsListView() {
 			}
 		}
 		pages.AddPage(pageEcsDetail, createEcsDetailView(selectedInstance), true, true)
-		app.SetFocus(ecsDetailForm.GetButton(ecsDetailForm.GetButtonCount() - 1))
+		app.SetFocus(ecsDetailView)
 	})
 	pages.AddPage(pageEcsList, ecsInstanceTable, true, true)
 	app.SetFocus(ecsInstanceTable)
@@ -471,20 +525,25 @@ func switchToSlbListView() {
 			}
 		}
 		pages.AddPage(pageSlbDetail, createSlbDetailView(selectedSlb), true, true)
-		app.SetFocus(slbDetailForm.GetButton(slbDetailForm.GetButtonCount() - 1))
+		app.SetFocus(slbDetailView)
 	})
 	pages.AddPage(pageSlbList, slbInstanceTable, true, true)
 	app.SetFocus(slbInstanceTable)
 }
 
 func switchToOssBucketListView() {
-	buckets, err := fetchOssBuckets()
-	if err != nil {
-		showErrorModal(err.Error())
-	} // STUBBED
-	ossBucketTable = createOssBucketListView(buckets)
+	if allOssBuckets == nil {
+		buckets, err := fetchOssBuckets()
+		if err != nil {
+			showErrorModal(err.Error())
+			return
+		}
+		allOssBuckets = buckets
+	}
+	ossBucketTable = createOssBucketListView(allOssBuckets)
 	setupTableNavigation(ossBucketTable, func(row, col int) {
 		bucketName := ossBucketTable.GetCell(row, 0).GetReference().(string)
+		currentBucketName = bucketName
 		switchToOssObjectListView(bucketName)
 	})
 	pages.AddPage(pageOssBuckets, ossBucketTable, true, true)
@@ -495,9 +554,21 @@ func switchToOssObjectListView(bucketName string) {
 	objects, err := fetchOssObjects(bucketName)
 	if err != nil {
 		showErrorModal(err.Error())
-	} // STUBBED
+		return
+	}
 	ossObjectTable = createOssObjectListView(objects, bucketName)
-	setupTableNavigation(ossObjectTable, nil)
+	setupTableNavigation(ossObjectTable, func(row, col int) {
+		objectKey := ossObjectTable.GetCell(row, 0).GetReference().(string)
+		// Find the object details
+		for _, obj := range objects {
+			if obj.Key == objectKey {
+				ossDetailView = createJSONDetailView(fmt.Sprintf("Object Details: %s", objectKey), obj)
+				pages.AddPage("ossObjectDetail", ossDetailView, true, true)
+				app.SetFocus(ossDetailView)
+				break
+			}
+		}
+	})
 	pages.AddPage(pageOssObjects, ossObjectTable, true, true)
 	app.SetFocus(ossObjectTable)
 }
@@ -527,7 +598,7 @@ func switchToRdsListView() {
 		}
 		detailViewContent := createRdsDetailView(selectedInstance)
 		pages.AddPage(pageRdsDetail, detailViewContent, true, true) // Add and show
-		app.SetFocus(rdsDetailForm.GetButton(rdsDetailForm.GetButtonCount() - 1))
+		app.SetFocus(rdsDetailView)
 	})
 	pages.AddPage(pageRdsList, rdsInstanceTable, true, true) // Add and show
 	app.SetFocus(rdsInstanceTable)
@@ -635,15 +706,21 @@ func main() {
 				handleNavigation(pageSlbList, slbInstanceTable)
 			case pageOssObjects:
 				handleNavigation(pageOssBuckets, ossBucketTable)
+			case "ossObjectDetail":
+				handleNavigation(pageOssObjects, ossObjectTable)
 			case pageRdsDetail:
 				handleNavigation(pageRdsList, rdsInstanceTable) // Added RdsDetail
 			}
 			return nil
 		case tcell.KeyRune:
-			if event.Rune() == 'q' {
+			if event.Rune() == 'Q' { // Only uppercase Q exits the program
+				app.Stop()
+				return nil
+			} else if event.Rune() == 'q' { // lowercase q goes back
 				switch currentPageName {
-				case pageMainMenu, pageEcsList, pageDnsDomains, pageSlbList, pageOssBuckets, pageRdsList: // Added RdsList
-					app.Stop()
+				case pageMainMenu, pageEcsList, pageDnsDomains, pageSlbList, pageOssBuckets, pageRdsList:
+					// On main pages, q does nothing (only Q exits)
+					return nil
 				case pageEcsDetail:
 					handleNavigation(pageEcsList, ecsInstanceTable)
 				case pageDnsRecords:
@@ -652,8 +729,10 @@ func main() {
 					handleNavigation(pageSlbList, slbInstanceTable)
 				case pageOssObjects:
 					handleNavigation(pageOssBuckets, ossBucketTable)
+				case "ossObjectDetail":
+					handleNavigation(pageOssObjects, ossObjectTable)
 				case pageRdsDetail:
-					handleNavigation(pageRdsList, rdsInstanceTable) // Added RdsDetail
+					handleNavigation(pageRdsList, rdsInstanceTable)
 				}
 				return nil
 			}

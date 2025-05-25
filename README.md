@@ -4,11 +4,11 @@ A Terminal User Interface (TUI) application for managing Alibaba Cloud resources
 
 ## Features
 
-- **ECS Instances**: View instance details, status, IP addresses, and configurations
+- **ECS Instances**: View instance details with zone, CPU/RAM configuration, private/public IPs, and full JSON details
 - **DNS Management**: Browse AliDNS domains and their DNS records
-- **SLB Instances**: Monitor Server Load Balancer instances and their configurations
-- **RDS Instances**: Inspect RDS database instances and their properties
-- **OSS Management**: Browse OSS buckets and objects (currently stubbed)
+- **SLB Instances**: Monitor Server Load Balancer instances and their configurations with JSON details
+- **RDS Instances**: Inspect RDS database instances and their properties with JSON details
+- **OSS Management**: Browse OSS buckets and objects with full details
 
 ## Prerequisites
 
@@ -90,7 +90,7 @@ tali
 The application uses vim-style keyboard navigation:
 
 #### Global Controls
-- `Ctrl+C` - Quit application
+- `Ctrl+C` or `Q` - Quit application
 - `Esc` or `q` - Go back to previous screen/menu
 - `Enter` - Select item or view details
 
@@ -103,19 +103,20 @@ The application uses vim-style keyboard navigation:
 - `1` - View ECS Instances
 - `2` - DNS Management
 - `3` - View SLB Instances
-- `4` - OSS Management (currently stubbed)
+- `4` - OSS Management
 - `5` - View RDS Instances
-- `q` - Quit application
+- `Q` - Quit application
 
 ### Screens and Features
 
 #### ECS Instances
-- Lists all ECS instances with ID, status, IP address, and name
-- Select an instance to view detailed information including:
+- Lists all ECS instances with ID, status, zone, CPU/RAM configuration, private IP, public IP, and name
+- Select an instance to view complete JSON details including:
   - Instance specifications
   - Network configuration
   - Security groups
   - Storage details
+  - All available metadata
 
 #### DNS Management
 - Browse all domains in your account
@@ -126,16 +127,22 @@ The application uses vim-style keyboard navigation:
 #### SLB Instances
 - List all Server Load Balancer instances
 - View SLB ID, name, IP address, type, and status
-- Select for detailed configuration view
+- Select for complete JSON configuration view
 
 #### RDS Instances
 - Browse all RDS database instances
 - View engine type, version, instance class, and status
-- Select for detailed database configuration including:
+- Select for complete JSON database configuration including:
   - Connection strings and ports
   - Storage information
   - Network configuration
   - Backup and maintenance windows
+  - All available metadata
+
+#### OSS Management
+- Browse all OSS buckets with name, location, creation date, and storage class
+- Select a bucket to view all objects with key, size, last modified date, storage class, and ETag
+- Select an object to view complete JSON metadata
 
 ## Required Permissions
 
@@ -145,7 +152,7 @@ Your Alibaba Cloud Access Key needs the following permissions:
 - **DNS**: `alidns:DescribeDomains`, `alidns:DescribeDomainRecords`
 - **SLB**: `slb:DescribeLoadBalancers`
 - **RDS**: `rds:DescribeDBInstances`
-- **OSS**: `oss:ListBuckets`, `oss:ListObjects` (when implemented)
+- **OSS**: `oss:ListBuckets`, `oss:ListObjects`
 
 ## Troubleshooting
 

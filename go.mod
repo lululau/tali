@@ -1,6 +1,8 @@
 module aliyun-tui-viewer
 
-go 1.22.2
+go 1.23.0
+
+toolchain go1.24.3
 
 require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.107
@@ -9,6 +11,7 @@ require (
 )
 
 require (
+	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -21,5 +24,6 @@ require (
 	golang.org/x/sys v0.17.0 // indirect
 	golang.org/x/term v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/time v0.11.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
