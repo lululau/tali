@@ -109,3 +109,120 @@ func LoadAliyunConfig() (*Config, error) {
 		OssEndpoint:     ossEndpoint,
 	}, nil
 }
+
+// GetCurrentProfileName returns the name of the current active profile
+func GetCurrentProfileName() (string, error) {
+	usr, err := user.Current()
+	if err != nil {
+		return "", fmt.Errorf("failed to get current user: %w", err)
+	}
+	configPath := filepath.Join(usr.HomeDir, ".aliyun", "config.json")
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read aliyun config file at %s: %w", configPath, err)
+	}
+
+	var config AliyunConfig
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse aliyun config file %s: %w", configPath, err)
+	}
+
+	if config.Current != "" {
+		return config.Current, nil
+	}
+
+	// Fallback logic
+	if len(config.Profiles) == 1 {
+		return config.Profiles[0].Name, nil
+	}
+
+	for _, p := range config.Profiles {
+		if p.Name == "default" {
+			return "default", nil
+		}
+	}
+
+	if len(config.Profiles) > 0 {
+		return config.Profiles[0].Name, nil
+	}
+
+	return "", fmt.Errorf("no profiles found")
+}
+
+// ListAllProfiles returns all available profile names
+func ListAllProfiles() ([]string, error) {
+	usr, err := user.Current()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current user: %w", err)
+	}
+	configPath := filepath.Join(usr.HomeDir, ".aliyun", "config.json")
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read aliyun config file at %s: %w", configPath, err)
+	}
+
+	var config AliyunConfig
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse aliyun config file %s: %w", configPath, err)
+	}
+
+	var profiles []string
+	for _, profile := range config.Profiles {
+		profiles = append(profiles, profile.Name)
+	}
+
+	return profiles, nil
+}
+
+// SwitchProfile switches to the specified profile
+func SwitchProfile(profileName string) error {
+	usr, err := user.Current()
+	if err != nil {
+		return fmt.Errorf("failed to get current user: %w", err)
+	}
+	configPath := filepath.Join(usr.HomeDir, ".aliyun", "config.json")
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to read aliyun config file at %s: %w", configPath, err)
+	}
+
+	var config AliyunConfig
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		return fmt.Errorf("failed to parse aliyun config file %s: %w", configPath, err)
+	}
+
+	// Check if profile exists
+	profileExists := false
+	for _, profile := range config.Profiles {
+		if profile.Name == profileName {
+			profileExists = true
+			break
+		}
+	}
+
+	if !profileExists {
+		return fmt.Errorf("profile '%s' not found", profileName)
+	}
+
+	// Update current profile
+	config.Current = profileName
+
+	// Write back to file
+	updatedData, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	err = os.WriteFile(configPath, updatedData, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return nil
+}

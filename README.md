@@ -93,6 +93,25 @@ The application uses vim-style keyboard navigation:
 - `Ctrl+C` or `Q` - Quit application
 - `Esc` or `q` - Go back to previous screen/menu
 - `Enter` - Select item or view details
+- `O` - Open profile selection dialog
+
+#### Profile Management
+- The mode line at the bottom shows the current active profile
+- Press `O` to open the profile selection dialog
+- In the profile dialog:
+  - Use `j/k` to navigate up/down
+  - Press `Enter` to select a profile
+  - Press `q` or `Esc` to cancel
+- After switching profiles:
+  - All client connections are automatically recreated
+  - All cached data is cleared
+  - Returns to main menu
+  - New credentials take effect immediately
+
+#### OSS Object Pagination
+- `[` - Previous page
+- `]` - Next page  
+- `0` - Go to first page
 
 #### List Navigation
 - `j` - Move down

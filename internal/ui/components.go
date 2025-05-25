@@ -98,3 +98,23 @@ func CreateDetailViewWithInstructions(detailView *tview.TextView) *tview.Flex {
 
 	return flex
 }
+
+// CreateModeLine creates a mode line component showing current profile and shortcuts
+func CreateModeLine(profileName string) *tview.TextView {
+	modeLineText := fmt.Sprintf(" Profile: %s | Press 'O' to switch profile ", profileName)
+
+	modeLine := tview.NewTextView()
+	modeLine.SetText(modeLineText)
+	modeLine.SetTextAlign(tview.AlignLeft)
+	modeLine.SetDynamicColors(true)
+	modeLine.SetBackgroundColor(tcell.ColorReset)
+	modeLine.SetBorder(false)
+
+	return modeLine
+}
+
+// UpdateModeLine updates the mode line with new profile information
+func UpdateModeLine(modeLine *tview.TextView, profileName string) {
+	modeLineText := fmt.Sprintf(" Profile: %s | Press 'O' to switch profile ", profileName)
+	modeLine.SetText(modeLineText)
+}

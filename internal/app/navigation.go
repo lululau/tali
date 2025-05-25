@@ -6,6 +6,8 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
+	"aliyun-tui-viewer/internal/client"
+	"aliyun-tui-viewer/internal/config"
 	"aliyun-tui-viewer/internal/service"
 	"aliyun-tui-viewer/internal/ui"
 )
@@ -39,6 +41,9 @@ func (a *App) setupGlobalInputCapture() {
 				return nil
 			} else if event.Rune() == 'q' { // lowercase q goes back
 				a.handleBackKey(currentPageName)
+				return nil
+			} else if event.Rune() == 'O' { // Uppercase O opens profile selection
+				a.showProfileSelectionDialog()
 				return nil
 			}
 		}
@@ -333,6 +338,123 @@ func (a *App) goToFirstOssPage() {
 	a.ossCurrentPage = 1
 
 	a.loadOssObjectPage()
+}
+
+// showProfileSelectionDialog shows the profile selection dialog
+func (a *App) showProfileSelectionDialog() {
+	profiles, err := config.ListAllProfiles()
+	if err != nil {
+		a.showErrorModal(fmt.Sprintf("Failed to load profiles: %v", err))
+		return
+	}
+
+	ui.ShowProfileSelectionDialog(a.pages, a.tviewApp, profiles, a.currentProfile,
+		func(selectedProfile string) {
+			// Profile selected callback
+			a.switchToProfile(selectedProfile)
+		},
+		func() {
+			// Cancel callback - restore focus to current page
+			_, prim := a.pages.GetFrontPage()
+			if prim != nil {
+				a.tviewApp.SetFocus(prim)
+			} else {
+				a.tviewApp.SetFocus(a.mainMenu)
+			}
+		})
+}
+
+// switchToProfile switches to the selected profile and reinitializes the application
+func (a *App) switchToProfile(profileName string) {
+	if profileName == a.currentProfile {
+		// Same profile, just restore focus
+		_, prim := a.pages.GetFrontPage()
+		if prim != nil {
+			a.tviewApp.SetFocus(prim)
+		} else {
+			a.tviewApp.SetFocus(a.mainMenu)
+		}
+		return
+	}
+
+	// Store original profile for rollback
+	originalProfile := a.currentProfile
+
+	// Switch profile in config
+	err := config.SwitchProfile(profileName)
+	if err != nil {
+		a.showErrorModal(fmt.Sprintf("Failed to switch profile: %v", err))
+		return
+	}
+
+	// Load new configuration
+	cfg, err := config.LoadAliyunConfig()
+	if err != nil {
+		// Rollback profile change
+		config.SwitchProfile(originalProfile)
+		a.showErrorModal(fmt.Sprintf("Failed to load new configuration: %v", err))
+		return
+	}
+
+	// Create new clients with the new configuration
+	clientConfig := &client.Config{
+		AccessKeyID:     cfg.AccessKeyID,
+		AccessKeySecret: cfg.AccessKeySecret,
+		RegionID:        cfg.RegionID,
+		OssEndpoint:     cfg.OssEndpoint,
+	}
+
+	newClients, err := client.NewAliyunClients(clientConfig)
+	if err != nil {
+		// Rollback profile change
+		config.SwitchProfile(originalProfile)
+		a.showErrorModal(fmt.Sprintf("Failed to create new clients: %v", err))
+		return
+	}
+
+	// Create new services with the new clients
+	newServices := &Services{
+		ECS: service.NewECSService(newClients.ECS),
+		DNS: service.NewDNSService(newClients.DNS),
+		SLB: service.NewSLBService(newClients.SLB),
+		RDS: service.NewRDSService(newClients.RDS),
+		OSS: service.NewOSSServiceWithCredentials(newClients.OSS, cfg.AccessKeyID, cfg.AccessKeySecret, cfg.OssEndpoint),
+	}
+
+	// Update application state
+	a.clients = newClients
+	a.services = newServices
+	a.currentProfile = profileName
+
+	// Update mode line
+	ui.UpdateModeLine(a.modeLine, a.currentProfile)
+
+	// Clear cached data to force reload with new profile
+	a.clearCachedData()
+
+	// Navigate back to main menu for better user experience
+	a.pages.SwitchToPage(ui.PageMainMenu)
+	a.tviewApp.SetFocus(a.mainMenu)
+
+	// Show success message
+	a.showErrorModal(fmt.Sprintf("Successfully switched to profile: %s\nNew credentials are now active.", profileName))
+}
+
+// clearCachedData clears all cached data to force reload with new profile
+func (a *App) clearCachedData() {
+	a.allECSInstances = nil
+	a.allDomains = nil
+	a.allSLBInstances = nil
+	a.allRDSInstances = nil
+	a.allOssBuckets = nil
+	a.currentBucketName = ""
+
+	// Reset OSS pagination state
+	a.ossCurrentMarker = ""
+	a.ossPreviousMarkers = []string{}
+	a.ossCurrentPage = 0
+	a.ossPageSize = 0
+	a.ossHasNextPage = false
 }
 
 // switchToRdsListView switches to RDS list view

@@ -37,6 +37,7 @@ type App struct {
 	ossDetailView    *tview.TextView
 	rdsInstanceTable *tview.Table
 	rdsDetailView    *tview.TextView
+	modeLine         *tview.TextView
 
 	// Data cache
 	allECSInstances   []ecs.Instance
@@ -52,6 +53,9 @@ type App struct {
 	ossCurrentPage     int
 	ossPageSize        int
 	ossHasNextPage     bool
+
+	// Configuration
+	currentProfile string
 }
 
 // Services holds all service instances
@@ -69,6 +73,12 @@ func New() (*App, error) {
 	cfg, err := config.LoadAliyunConfig()
 	if err != nil {
 		return nil, fmt.Errorf("loading config: %w", err)
+	}
+
+	// Get current profile name
+	currentProfile, err := config.GetCurrentProfileName()
+	if err != nil {
+		return nil, fmt.Errorf("getting current profile: %w", err)
 	}
 
 	// Create clients
@@ -99,10 +109,11 @@ func New() (*App, error) {
 	pages.SetBackgroundColor(tcell.ColorReset)
 
 	app := &App{
-		tviewApp: tviewApp,
-		pages:    pages,
-		clients:  clients,
-		services: services,
+		tviewApp:       tviewApp,
+		pages:          pages,
+		clients:        clients,
+		services:       services,
+		currentProfile: currentProfile,
 	}
 
 	// Initialize UI
@@ -113,7 +124,7 @@ func New() (*App, error) {
 
 // Run starts the application
 func (a *App) Run() error {
-	return a.tviewApp.SetRoot(a.pages, true).EnableMouse(true).Run()
+	return a.tviewApp.EnableMouse(true).Run()
 }
 
 // Stop stops the application
@@ -123,6 +134,9 @@ func (a *App) Stop() {
 
 // initializeUI initializes the user interface
 func (a *App) initializeUI() {
+	// Create mode line
+	a.modeLine = ui.CreateModeLine(a.currentProfile)
+
 	// Create main menu
 	a.mainMenu = ui.CreateMainMenu(
 		a.switchToEcsListView,
@@ -133,8 +147,16 @@ func (a *App) initializeUI() {
 		a.Stop,
 	)
 
+	// Create main layout with mode line at bottom
+	mainLayout := tview.NewFlex().SetDirection(tview.FlexRow)
+	mainLayout.AddItem(a.pages, 0, 1, true)
+	mainLayout.AddItem(a.modeLine, 1, 0, false)
+
 	// Add main menu to pages
 	a.pages.AddPage(ui.PageMainMenu, a.mainMenu, true, true)
+
+	// Set the main layout as root instead of pages directly
+	a.tviewApp.SetRoot(mainLayout, true)
 
 	// Set up global input capture
 	a.setupGlobalInputCapture()
