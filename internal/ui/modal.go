@@ -44,7 +44,7 @@ func ShowProfileSelectionDialog(pages *tview.Pages, app *tview.Application, prof
 		SetTitle("Select Profile").
 		SetBackgroundColor(tcell.ColorDefault)
 
-	// Set up j/k navigation
+	// Set up j/k navigation and cancel keys
 	list.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Rune() {
 		case 'j':
@@ -62,24 +62,9 @@ func ShowProfileSelectionDialog(pages *tview.Pages, app *tview.Application, prof
 				list.SetCurrentItem(currentItem - 1)
 			}
 			return nil
-		case 'q':
-			// Cancel
-			pages.RemovePage("profileDialog")
-			if onCancel != nil {
-				onCancel()
-			}
-			return nil
 		}
 
-		// Handle Escape key
-		if event.Key() == tcell.KeyEscape {
-			pages.RemovePage("profileDialog")
-			if onCancel != nil {
-				onCancel()
-			}
-			return nil
-		}
-
+		// Let other events (including ESC and 'q') bubble up to the flex container
 		return event
 	})
 
@@ -93,5 +78,39 @@ func ShowProfileSelectionDialog(pages *tview.Pages, app *tview.Application, prof
 		AddItem(nil, 0, 1, false)
 
 	pages.AddPage("profileDialog", flex, true, true)
+
+	// Set up global input capture for this dialog
+	originalInputCapture := app.GetInputCapture()
+	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		// Only handle events when the profile dialog is active
+		if pages.HasPage("profileDialog") {
+			// Handle Escape key
+			if event.Key() == tcell.KeyEscape {
+				pages.RemovePage("profileDialog")
+				app.SetInputCapture(originalInputCapture) // Restore original capture
+				if onCancel != nil {
+					onCancel()
+				}
+				return nil
+			}
+
+			// Handle 'q' key
+			if event.Rune() == 'q' {
+				pages.RemovePage("profileDialog")
+				app.SetInputCapture(originalInputCapture) // Restore original capture
+				if onCancel != nil {
+					onCancel()
+				}
+				return nil
+			}
+		}
+
+		// Pass through to original handler or default behavior
+		if originalInputCapture != nil {
+			return originalInputCapture(event)
+		}
+		return event
+	})
+
 	app.SetFocus(list)
 }
