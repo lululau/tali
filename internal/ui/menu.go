@@ -15,11 +15,11 @@ func CreateMainMenu(
 	onQuit func(),
 ) *tview.List {
 	list := tview.NewList().
-		AddItem("ECS Instances", "View ECS instances", '1', onECS).
-		AddItem("DNS Management", "View AliDNS domains and records", '2', onDNS).
-		AddItem("SLB Instances", "View SLB instances", '3', onSLB).
-		AddItem("OSS Management", "Browse OSS buckets and objects", '4', onOSS).
-		AddItem("RDS Instances", "View RDS instances", '5', onRDS).
+		AddItem("ECS Instances", "View ECS instances", 's', onECS).
+		AddItem("DNS Management", "View AliDNS domains and records", 'd', onDNS).
+		AddItem("SLB Instances", "View SLB instances", 'b', onSLB).
+		AddItem("OSS Management", "Browse OSS buckets and objects", 'o', onOSS).
+		AddItem("RDS Instances", "View RDS instances", 'r', onRDS).
 		AddItem("Quit", "Exit the application (Press 'Q')", 'Q', onQuit)
 
 	list.SetBorder(true).SetTitle("Main Menu").SetBackgroundColor(tcell.ColorReset)
