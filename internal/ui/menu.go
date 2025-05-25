@@ -12,6 +12,7 @@ func CreateMainMenu(
 	onSLB func(),
 	onOSS func(),
 	onRDS func(),
+	onRedis func(),
 	onQuit func(),
 ) *tview.List {
 	list := tview.NewList().
@@ -20,6 +21,7 @@ func CreateMainMenu(
 		AddItem("SLB Instances", "View SLB instances", 'b', onSLB).
 		AddItem("OSS Management", "Browse OSS buckets and objects", 'o', onOSS).
 		AddItem("RDS Instances", "View RDS instances", 'r', onRDS).
+		AddItem("Redis Instances", "View Redis instances", 'i', onRedis).
 		AddItem("Quit", "Exit the application (Press 'Q')", 'Q', onQuit)
 
 	list.SetBorder(true).SetTitle("Main Menu").SetBackgroundColor(tcell.ColorReset)

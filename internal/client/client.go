@@ -5,6 +5,7 @@ import (
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/alidns"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
+	r_kvstore "github.com/aliyun/alibaba-cloud-sdk-go/services/r-kvstore"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/rds"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/slb"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
@@ -17,6 +18,7 @@ type AliyunClients struct {
 	SLB    *slb.Client
 	RDS    *rds.Client
 	OSS    *oss.Client
+	Redis  *r_kvstore.Client
 	config *Config
 }
 
@@ -66,6 +68,13 @@ func NewAliyunClients(cfg *Config) (*AliyunClients, error) {
 		return nil, fmt.Errorf("creating OSS client: %w", err)
 	}
 	clients.OSS = ossClient
+
+	// Initialize Redis client
+	redisClient, err := r_kvstore.NewClientWithAccessKey(cfg.RegionID, cfg.AccessKeyID, cfg.AccessKeySecret)
+	if err != nil {
+		return nil, fmt.Errorf("creating Redis client: %w", err)
+	}
+	clients.Redis = redisClient
 
 	return clients, nil
 }

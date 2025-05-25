@@ -5,6 +5,7 @@ import (
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/alidns"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
+	r_kvstore "github.com/aliyun/alibaba-cloud-sdk-go/services/r-kvstore"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/rds"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/slb"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
@@ -25,22 +26,24 @@ type App struct {
 	services *Services
 
 	// UI components
-	mainMenu         *tview.List
-	ecsInstanceTable *tview.Table
-	ecsDetailView    *tview.TextView
-	dnsDomainsTable  *tview.Table
-	dnsRecordsTable  *tview.Table
-	slbInstanceTable *tview.Table
-	slbDetailView    *tview.TextView
-	ossBucketTable   *tview.Table
-	ossObjectTable   *tview.Table
-	ossDetailView    *tview.TextView
-	rdsInstanceTable *tview.Table
-	rdsDetailView    *tview.TextView
-	rdsDatabaseTable *tview.Table
-	rdsAccountTable  *tview.Table
-	modeLine         *tview.TextView
-	mainLayout       *tview.Flex // Keep for now, might remove if root structure changes significantly
+	mainMenu           *tview.List
+	ecsInstanceTable   *tview.Table
+	ecsDetailView      *tview.TextView
+	dnsDomainsTable    *tview.Table
+	dnsRecordsTable    *tview.Table
+	slbInstanceTable   *tview.Table
+	slbDetailView      *tview.TextView
+	ossBucketTable     *tview.Table
+	ossObjectTable     *tview.Table
+	ossDetailView      *tview.TextView
+	rdsInstanceTable   *tview.Table
+	rdsDetailView      *tview.TextView
+	rdsDatabaseTable   *tview.Table
+	rdsAccountTable    *tview.Table
+	redisInstanceTable *tview.Table
+	redisAccountTable  *tview.Table
+	modeLine           *tview.TextView
+	mainLayout         *tview.Flex // Keep for now, might remove if root structure changes significantly
 
 	// Shared Search UI
 	searchBar           *tview.InputField
@@ -48,13 +51,15 @@ type App struct {
 	activeSearchHandler *ui.VimSearchHandler
 
 	// Data cache
-	allECSInstances      []ecs.Instance
-	allDomains           []alidns.DomainInDescribeDomains
-	allSLBInstances      []slb.LoadBalancer
-	allRDSInstances      []rds.DBInstance
-	allOssBuckets        []oss.BucketProperties
-	currentBucketName    string
-	currentRdsInstanceId string
+	allECSInstances        []ecs.Instance
+	allDomains             []alidns.DomainInDescribeDomains
+	allSLBInstances        []slb.LoadBalancer
+	allRDSInstances        []rds.DBInstance
+	allRedisInstances      []r_kvstore.KVStoreInstance
+	allOssBuckets          []oss.BucketProperties
+	currentBucketName      string
+	currentRdsInstanceId   string
+	currentRedisInstanceId string
 
 	// OSS pagination state
 	ossCurrentMarker   string
@@ -73,11 +78,12 @@ type App struct {
 
 // Services holds all service instances
 type Services struct {
-	ECS *service.ECSService
-	DNS *service.DNSService
-	SLB *service.SLBService
-	RDS *service.RDSService
-	OSS *service.OSSService
+	ECS   *service.ECSService
+	DNS   *service.DNSService
+	SLB   *service.SLBService
+	RDS   *service.RDSService
+	OSS   *service.OSSService
+	Redis *service.RedisService
 }
 
 // New creates a new application instance
@@ -109,11 +115,12 @@ func New() (*App, error) {
 
 	// Create services
 	services := &Services{
-		ECS: service.NewECSService(clients.ECS),
-		DNS: service.NewDNSService(clients.DNS),
-		SLB: service.NewSLBService(clients.SLB),
-		RDS: service.NewRDSService(clients.RDS),
-		OSS: service.NewOSSServiceWithCredentials(clients.OSS, cfg.AccessKeyID, cfg.AccessKeySecret, cfg.OssEndpoint),
+		ECS:   service.NewECSService(clients.ECS),
+		DNS:   service.NewDNSService(clients.DNS),
+		SLB:   service.NewSLBService(clients.SLB),
+		RDS:   service.NewRDSService(clients.RDS),
+		OSS:   service.NewOSSServiceWithCredentials(clients.OSS, cfg.AccessKeyID, cfg.AccessKeySecret, cfg.OssEndpoint),
+		Redis: service.NewRedisService(clients.Redis),
 	}
 
 	// Create tview app and pages
@@ -160,6 +167,7 @@ func (a *App) initializeUI() {
 		a.switchToSlbListView,
 		a.switchToOssBucketListView,
 		a.switchToRdsListView,
+		a.switchToRedisListView,
 		a.Stop,
 	)
 

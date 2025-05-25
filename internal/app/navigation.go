@@ -5,6 +5,7 @@ import (
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/alidns"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
+	r_kvstore "github.com/aliyun/alibaba-cloud-sdk-go/services/r-kvstore"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/rds"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/slb"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
@@ -59,7 +60,7 @@ func (a *App) setupGlobalInputCapture() {
 // handleEscapeKey handles escape key navigation
 func (a *App) handleEscapeKey(currentPageName string) {
 	switch currentPageName {
-	case ui.PageEcsList, ui.PageDnsDomains, ui.PageSlbList, ui.PageOssBuckets, ui.PageRdsList:
+	case ui.PageEcsList, ui.PageDnsDomains, ui.PageSlbList, ui.PageOssBuckets, ui.PageRdsList, ui.PageRedisList:
 		a.handleNavigation(ui.PageMainMenu, a.mainMenu)
 	case ui.PageEcsDetail:
 		a.handleNavigation(ui.PageEcsList, a.ecsInstanceTable)
@@ -68,7 +69,6 @@ func (a *App) handleEscapeKey(currentPageName string) {
 	case ui.PageSlbDetail:
 		a.handleNavigation(ui.PageSlbList, a.slbInstanceTable)
 	case ui.PageOssObjects:
-		// Restore normal mode line when leaving OSS objects
 		ui.UpdateModeLine(a.modeLine, a.currentProfile)
 		a.handleNavigation(ui.PageOssBuckets, a.ossBucketTable)
 	case "ossObjectDetail":
@@ -83,6 +83,12 @@ func (a *App) handleEscapeKey(currentPageName string) {
 		a.handleNavigation(ui.PageRdsDatabases, a.rdsDatabaseTable)
 	case "rdsAccountDetail":
 		a.handleNavigation(ui.PageRdsAccounts, a.rdsAccountTable)
+	case ui.PageRedisAccounts:
+		a.handleNavigation(ui.PageRedisList, a.redisInstanceTable)
+	case "redisDetail":
+		a.handleNavigation(ui.PageRedisList, a.redisInstanceTable)
+	case "redisAccountDetail":
+		a.handleNavigation(ui.PageRedisAccounts, a.redisAccountTable)
 	}
 }
 
@@ -90,10 +96,8 @@ func (a *App) handleEscapeKey(currentPageName string) {
 func (a *App) handleBackKey(currentPageName string) {
 	switch currentPageName {
 	case ui.PageMainMenu:
-		// On main menu, q does nothing (only Q exits)
 		return
-	case ui.PageEcsList, ui.PageDnsDomains, ui.PageSlbList, ui.PageOssBuckets, ui.PageRdsList:
-		// On list pages, q goes back to main menu
+	case ui.PageEcsList, ui.PageDnsDomains, ui.PageSlbList, ui.PageOssBuckets, ui.PageRdsList, ui.PageRedisList:
 		a.handleNavigation(ui.PageMainMenu, a.mainMenu)
 	case ui.PageEcsDetail:
 		a.handleNavigation(ui.PageEcsList, a.ecsInstanceTable)
@@ -102,7 +106,6 @@ func (a *App) handleBackKey(currentPageName string) {
 	case ui.PageSlbDetail:
 		a.handleNavigation(ui.PageSlbList, a.slbInstanceTable)
 	case ui.PageOssObjects:
-		// Restore normal mode line when leaving OSS objects
 		ui.UpdateModeLine(a.modeLine, a.currentProfile)
 		a.handleNavigation(ui.PageOssBuckets, a.ossBucketTable)
 	case "ossObjectDetail":
@@ -117,6 +120,12 @@ func (a *App) handleBackKey(currentPageName string) {
 		a.handleNavigation(ui.PageRdsDatabases, a.rdsDatabaseTable)
 	case "rdsAccountDetail":
 		a.handleNavigation(ui.PageRdsAccounts, a.rdsAccountTable)
+	case ui.PageRedisAccounts:
+		a.handleNavigation(ui.PageRedisList, a.redisInstanceTable)
+	case "redisDetail":
+		a.handleNavigation(ui.PageRedisList, a.redisInstanceTable)
+	case "redisAccountDetail":
+		a.handleNavigation(ui.PageRedisAccounts, a.redisAccountTable)
 	}
 }
 
@@ -446,6 +455,20 @@ func (a *App) setupTableYankFunctionality(table *tview.Table, data interface{}) 
 										break
 									}
 								}
+							case []r_kvstore.KVStoreInstance:
+								for _, inst := range items {
+									if inst.InstanceId == ref.(string) {
+										rowData = inst
+										break
+									}
+								}
+							case []r_kvstore.Account:
+								for _, account := range items {
+									if account.AccountName == ref.(string) {
+										rowData = account
+										break
+									}
+								}
 							}
 						}
 					}
@@ -605,11 +628,12 @@ func (a *App) switchToProfile(profileName string) {
 
 	// Create new services with the new clients
 	newServices := &Services{
-		ECS: service.NewECSService(newClients.ECS),
-		DNS: service.NewDNSService(newClients.DNS),
-		SLB: service.NewSLBService(newClients.SLB),
-		RDS: service.NewRDSService(newClients.RDS),
-		OSS: service.NewOSSServiceWithCredentials(newClients.OSS, cfg.AccessKeyID, cfg.AccessKeySecret, cfg.OssEndpoint),
+		ECS:   service.NewECSService(newClients.ECS),
+		DNS:   service.NewDNSService(newClients.DNS),
+		SLB:   service.NewSLBService(newClients.SLB),
+		RDS:   service.NewRDSService(newClients.RDS),
+		OSS:   service.NewOSSServiceWithCredentials(newClients.OSS, cfg.AccessKeyID, cfg.AccessKeySecret, cfg.OssEndpoint),
+		Redis: service.NewRedisService(newClients.Redis),
 	}
 
 	// Update application state
@@ -637,8 +661,11 @@ func (a *App) clearCachedData() {
 	a.allDomains = nil
 	a.allSLBInstances = nil
 	a.allRDSInstances = nil
+	a.allRedisInstances = nil
 	a.allOssBuckets = nil
 	a.currentBucketName = ""
+	a.currentRdsInstanceId = ""
+	a.currentRedisInstanceId = ""
 
 	// Reset OSS pagination state
 	a.ossCurrentMarker = ""
@@ -843,4 +870,147 @@ func (a *App) switchToRdsAccountsView(instanceId string) {
 	rdsAccountListFlex := ui.WrapTableInFlex(a.rdsAccountTable)
 	a.pages.AddPage(ui.PageRdsAccounts, rdsAccountListFlex, true, true)
 	a.tviewApp.SetFocus(a.rdsAccountTable)
+}
+
+// switchToRedisListView switches to Redis list view
+func (a *App) switchToRedisListView() {
+	instances, err := a.services.Redis.FetchInstances()
+	if err != nil {
+		a.showErrorModal(fmt.Sprintf("Failed to fetch Redis instances: %v", err))
+		return
+	}
+	a.allRedisInstances = instances
+
+	a.redisInstanceTable = ui.CreateRedisListView(instances)
+	searchHandler := ui.SetupTableNavigationWithSearch(a.redisInstanceTable, a, func(row, col int) {
+		instanceId := a.redisInstanceTable.GetCell(row, 0).GetReference().(string)
+		var selectedInstance interface{}
+		for _, inst := range instances {
+			if inst.InstanceId == instanceId {
+				selectedInstance = inst
+				break
+			}
+		}
+		a.currentDetailData = selectedInstance
+		detailView, _ := ui.CreateInteractiveJSONDetailViewWithSearch(
+			fmt.Sprintf("Redis Details: %s", instanceId),
+			selectedInstance,
+			a,
+			func() {
+				err := ui.CopyToClipboard(selectedInstance)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to copy: %v", err))
+				} else {
+					a.showErrorModal("Copied!")
+				}
+			},
+			func() {
+				err := ui.OpenInNvim(selectedInstance)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
+				}
+			},
+		)
+		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
+		a.pages.AddPage("redisDetail", detailViewWithInstructions, true, true)
+		a.tviewApp.SetFocus(detailView)
+	})
+
+	a.setupTableYankFunctionality(a.redisInstanceTable, instances)
+	a.setupRedisKeyHandlers(a.redisInstanceTable, searchHandler)
+
+	redisListFlex := ui.WrapTableInFlex(a.redisInstanceTable)
+	a.pages.AddPage(ui.PageRedisList, redisListFlex, true, true)
+	a.tviewApp.SetFocus(a.redisInstanceTable)
+}
+
+// setupRedisKeyHandlers sets up 'A' key for Redis instance list
+func (a *App) setupRedisKeyHandlers(table *tview.Table, searchHandler *ui.VimSearchHandler) {
+	originalInputCapture := table.GetInputCapture()
+	table.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		// Check if the app-level search bar is active for the current handler
+		isCurrentHandlerSearchActive := false
+		if a.activeSearchHandler == searchHandler {
+			frontPage, _ := a.searchBarContainer.GetFrontPage()
+			if frontPage == "visible" { // "visible" is the page name for the search bar
+				isCurrentHandlerSearchActive = true
+			}
+		}
+
+		if isCurrentHandlerSearchActive {
+			switch event.Rune() {
+			case 'n', 'N', '/':
+				// Delegate to the app's shared search bar input capture
+				return a.searchBar.GetInputCapture()(event)
+			}
+		}
+
+		switch event.Rune() {
+		case 'A':
+			row, _ := table.GetSelection()
+			if row > 0 { // Skip header
+				cell := table.GetCell(row, 0)
+				if instanceId, ok := cell.GetReference().(string); ok {
+					a.switchToRedisAccountsView(instanceId)
+				}
+			}
+			return nil
+		}
+		if originalInputCapture != nil {
+			return originalInputCapture(event)
+		}
+		return event
+	})
+}
+
+// switchToRedisAccountsView switches to Redis accounts view for a given instance
+func (a *App) switchToRedisAccountsView(instanceId string) {
+	accounts, err := a.services.Redis.FetchAccounts(instanceId)
+	if err != nil {
+		a.showErrorModal(fmt.Sprintf("Failed to fetch accounts for Redis instance %s: %v", instanceId, err))
+		return
+	}
+
+	a.currentRedisInstanceId = instanceId
+	a.redisAccountTable = ui.CreateRedisAccountsListView(accounts, instanceId)
+
+	ui.SetupTableNavigationWithSearch(a.redisAccountTable, a, func(row, col int) {
+		accountName := a.redisAccountTable.GetCell(row, 0).GetReference().(string)
+		var selectedAccount interface{}
+		for _, account := range accounts {
+			if account.AccountName == accountName {
+				selectedAccount = account
+				break
+			}
+		}
+		a.currentDetailData = selectedAccount
+		detailView, _ := ui.CreateInteractiveJSONDetailViewWithSearch(
+			fmt.Sprintf("Redis Account Details: %s", accountName),
+			selectedAccount,
+			a,
+			func() {
+				err := ui.CopyToClipboard(selectedAccount)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to copy: %v", err))
+				} else {
+					a.showErrorModal("Copied!")
+				}
+			},
+			func() {
+				err := ui.OpenInNvim(selectedAccount)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
+				}
+			},
+		)
+		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
+		a.pages.AddPage("redisAccountDetail", detailViewWithInstructions, true, true)
+		a.tviewApp.SetFocus(detailView)
+	})
+
+	a.setupTableYankFunctionality(a.redisAccountTable, accounts)
+
+	redisAccountListFlex := ui.WrapTableInFlex(a.redisAccountTable)
+	a.pages.AddPage(ui.PageRedisAccounts, redisAccountListFlex, true, true)
+	a.tviewApp.SetFocus(a.redisAccountTable)
 }
