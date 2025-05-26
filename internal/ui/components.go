@@ -310,7 +310,7 @@ func UpdateModeLineWithPageInfo(modeLine *tview.TextView, profileName string, pa
 // GetPageShortcuts returns the shortcut help text for a given page
 func GetPageShortcuts(pageName string) string {
 	shortcuts := map[string]string{
-		PageMainMenu: "1-8: Select service | Q: Quit | O: Switch profile",
+		PageMainMenu: "Enter: Select current service | j/k: Navigate | Q: Quit | O: Switch profile",
 
 		// ECS related pages
 		PageEcsList:   "j/k: Navigate | Enter: Details | /: Search | n/N: Next/Prev search | yy: Copy | q: Back | O: Profile",
