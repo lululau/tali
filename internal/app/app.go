@@ -26,27 +26,29 @@ type App struct {
 	services *Services
 
 	// UI components
-	mainMenu              *tview.List
-	ecsInstanceTable      *tview.Table
-	ecsDetailView         *tview.TextView
-	dnsDomainsTable       *tview.Table
-	dnsRecordsTable       *tview.Table
-	slbInstanceTable      *tview.Table
-	slbDetailView         *tview.TextView
-	ossBucketTable        *tview.Table
-	ossObjectTable        *tview.Table
-	ossDetailView         *tview.TextView
-	rdsInstanceTable      *tview.Table
-	rdsDetailView         *tview.TextView
-	rdsDatabaseTable      *tview.Table
-	rdsAccountTable       *tview.Table
-	redisInstanceTable    *tview.Table
-	redisAccountTable     *tview.Table
-	rocketmqInstanceTable *tview.Table
-	rocketmqTopicsTable   *tview.Table
-	rocketmqGroupsTable   *tview.Table
-	modeLine              *tview.TextView
-	mainLayout            *tview.Flex // Keep for now, might remove if root structure changes significantly
+	mainMenu                *tview.List
+	ecsInstanceTable        *tview.Table
+	ecsDetailView           *tview.TextView
+	securityGroupTable      *tview.Table
+	securityGroupDetailView *tview.TextView
+	dnsDomainsTable         *tview.Table
+	dnsRecordsTable         *tview.Table
+	slbInstanceTable        *tview.Table
+	slbDetailView           *tview.TextView
+	ossBucketTable          *tview.Table
+	ossObjectTable          *tview.Table
+	ossDetailView           *tview.TextView
+	rdsInstanceTable        *tview.Table
+	rdsDetailView           *tview.TextView
+	rdsDatabaseTable        *tview.Table
+	rdsAccountTable         *tview.Table
+	redisInstanceTable      *tview.Table
+	redisAccountTable       *tview.Table
+	rocketmqInstanceTable   *tview.Table
+	rocketmqTopicsTable     *tview.Table
+	rocketmqGroupsTable     *tview.Table
+	modeLine                *tview.TextView
+	mainLayout              *tview.Flex // Keep for now, might remove if root structure changes significantly
 
 	// Shared Search UI
 	searchBar           *tview.InputField
@@ -55,6 +57,7 @@ type App struct {
 
 	// Data cache
 	allECSInstances           []ecs.Instance
+	allSecurityGroups         []ecs.SecurityGroup
 	allDomains                []alidns.DomainInDescribeDomains
 	allSLBInstances           []slb.LoadBalancer
 	allRDSInstances           []rds.DBInstance
@@ -170,6 +173,7 @@ func (a *App) initializeUI() {
 	// Create main menu
 	a.mainMenu = ui.CreateMainMenu(
 		a.switchToEcsListView,
+		a.switchToSecurityGroupsListView,
 		a.switchToDnsDomainsListView,
 		a.switchToSlbListView,
 		a.switchToOssBucketListView,

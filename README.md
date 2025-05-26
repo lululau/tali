@@ -152,10 +152,11 @@ The application uses vim-style keyboard navigation:
 
 #### Main Menu Options
 - `1` - View ECS Instances
-- `2` - DNS Management
-- `3` - View SLB Instances
-- `4` - OSS Management
-- `5` - View RDS Instances
+- `2` - View Security Groups
+- `3` - DNS Management
+- `4` - View SLB Instances
+- `5` - OSS Management
+- `6` - View RDS Instances
 - `Q` - Quit application
 
 ### Screens and Features
@@ -167,6 +168,14 @@ The application uses vim-style keyboard navigation:
   - Network configuration
   - Security groups
   - Storage details
+  - All available metadata
+
+#### Security Groups
+- Lists all ECS security groups with ID, name, description, VPC ID, type, and creation time
+- Select a security group to view complete JSON details including:
+  - Security group rules (ingress and egress)
+  - Associated instances
+  - Network configuration
   - All available metadata
 
 #### DNS Management
@@ -205,7 +214,7 @@ The application uses vim-style keyboard navigation:
 
 Your Alibaba Cloud Access Key needs the following permissions:
 
-- **ECS**: `ecs:DescribeInstances`
+- **ECS**: `ecs:DescribeInstances`, `ecs:DescribeSecurityGroups`
 - **DNS**: `alidns:DescribeDomains`, `alidns:DescribeDomainRecords`
 - **SLB**: `slb:DescribeLoadBalancers`
 - **RDS**: `rds:DescribeDBInstances`

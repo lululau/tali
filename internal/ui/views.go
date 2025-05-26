@@ -63,6 +63,38 @@ func CreateEcsDetailView(instance interface{}) *tview.Flex {
 	return CreateDetailViewWithInstructions(detailView)
 }
 
+// CreateSecurityGroupsListView creates security groups list view
+func CreateSecurityGroupsListView(securityGroups []ecs.SecurityGroup) *tview.Table {
+	table := tview.NewTable().
+		SetBorders(true).
+		SetSelectable(true, false)
+	table = SetupTableWithFixedWidth(table)
+	headers := []string{"Security Group ID", "Name", "Description", "VPC ID", "Type", "Creation Time"}
+	CreateTableHeaders(table, headers)
+
+	if len(securityGroups) == 0 {
+		table.SetCell(1, 0, tview.NewTableCell("No security groups found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
+	} else {
+		for r, sg := range securityGroups {
+			table.SetCell(r+1, 0, tview.NewTableCell(sg.SecurityGroupId).SetTextColor(tcell.ColorWhite).SetReference(sg.SecurityGroupId).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(sg.SecurityGroupName).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(sg.Description).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 3, tview.NewTableCell(sg.VpcId).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 4, tview.NewTableCell(sg.SecurityGroupType).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 5, tview.NewTableCell(sg.CreationTime).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+		}
+	}
+	table.SetTitle("Security Groups").SetBorder(true)
+	return table
+}
+
+// CreateSecurityGroupDetailView creates security group detail view
+func CreateSecurityGroupDetailView(securityGroup interface{}) *tview.Flex {
+	sg := securityGroup.(ecs.SecurityGroup)
+	detailView := CreateJSONDetailView(fmt.Sprintf("Security Group Details: %s", sg.SecurityGroupId), securityGroup)
+	return CreateDetailViewWithInstructions(detailView)
+}
+
 // CreateDnsDomainsListView creates DNS domains list view
 func CreateDnsDomainsListView(domains []alidns.DomainInDescribeDomains) *tview.Table {
 	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)

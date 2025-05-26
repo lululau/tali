@@ -60,10 +60,12 @@ func (a *App) setupGlobalInputCapture() {
 // handleEscapeKey handles escape key navigation
 func (a *App) handleEscapeKey(currentPageName string) {
 	switch currentPageName {
-	case ui.PageEcsList, ui.PageDnsDomains, ui.PageSlbList, ui.PageOssBuckets, ui.PageRdsList, ui.PageRedisList, ui.PageRocketMQList:
+	case ui.PageEcsList, ui.PageSecurityGroups, ui.PageDnsDomains, ui.PageSlbList, ui.PageOssBuckets, ui.PageRdsList, ui.PageRedisList, ui.PageRocketMQList:
 		a.handleNavigation(ui.PageMainMenu, a.mainMenu)
 	case ui.PageEcsDetail:
 		a.handleNavigation(ui.PageEcsList, a.ecsInstanceTable)
+	case ui.PageSecurityGroupDetail:
+		a.handleNavigation(ui.PageSecurityGroups, a.securityGroupTable)
 	case ui.PageDnsRecords:
 		a.handleNavigation(ui.PageDnsDomains, a.dnsDomainsTable)
 	case ui.PageSlbDetail:
@@ -107,10 +109,12 @@ func (a *App) handleBackKey(currentPageName string) {
 	switch currentPageName {
 	case ui.PageMainMenu:
 		return
-	case ui.PageEcsList, ui.PageDnsDomains, ui.PageSlbList, ui.PageOssBuckets, ui.PageRdsList, ui.PageRedisList, ui.PageRocketMQList:
+	case ui.PageEcsList, ui.PageSecurityGroups, ui.PageDnsDomains, ui.PageSlbList, ui.PageOssBuckets, ui.PageRdsList, ui.PageRedisList, ui.PageRocketMQList:
 		a.handleNavigation(ui.PageMainMenu, a.mainMenu)
 	case ui.PageEcsDetail:
 		a.handleNavigation(ui.PageEcsList, a.ecsInstanceTable)
+	case ui.PageSecurityGroupDetail:
+		a.handleNavigation(ui.PageSecurityGroups, a.securityGroupTable)
 	case ui.PageDnsRecords:
 		a.handleNavigation(ui.PageDnsDomains, a.dnsDomainsTable)
 	case ui.PageSlbDetail:
@@ -211,6 +215,60 @@ func (a *App) switchToEcsListView() {
 	ecsListFlex := ui.WrapTableInFlex(a.ecsInstanceTable)
 	a.pages.AddPage(ui.PageEcsList, ecsListFlex, true, true)
 	a.tviewApp.SetFocus(a.ecsInstanceTable)
+}
+
+// switchToSecurityGroupsListView switches to security groups list view
+func (a *App) switchToSecurityGroupsListView() {
+	if a.allSecurityGroups == nil {
+		securityGroups, err := a.services.ECS.FetchSecurityGroups()
+		if err != nil {
+			a.showErrorModal(err.Error())
+			return
+		}
+		a.allSecurityGroups = securityGroups
+	}
+	a.securityGroupTable = ui.CreateSecurityGroupsListView(a.allSecurityGroups)
+	ui.SetupTableNavigationWithSearch(a.securityGroupTable, a, func(row, col int) {
+		securityGroupId := a.securityGroupTable.GetCell(row, 0).GetReference().(string)
+		var selectedSecurityGroup interface{}
+		for _, sg := range a.allSecurityGroups {
+			if sg.SecurityGroupId == securityGroupId {
+				selectedSecurityGroup = sg
+				break
+			}
+		}
+		a.currentDetailData = selectedSecurityGroup
+		detailView, _ := ui.CreateInteractiveJSONDetailViewWithSearch(
+			fmt.Sprintf("Security Group Details: %s", securityGroupId),
+			selectedSecurityGroup,
+			a,
+			func() {
+				err := ui.CopyToClipboard(selectedSecurityGroup)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to copy: %v", err))
+				} else {
+					a.showErrorModal("Copied!")
+				}
+			},
+			func() {
+				err := ui.OpenInNvim(selectedSecurityGroup)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
+				}
+			},
+		)
+		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
+		a.pages.AddPage(ui.PageSecurityGroupDetail, detailViewWithInstructions, true, true)
+		if detailViewWithInstructions.GetItemCount() > 1 {
+			a.securityGroupDetailView = detailViewWithInstructions.GetItem(1).(*tview.TextView)
+		}
+		a.tviewApp.SetFocus(a.securityGroupDetailView)
+	})
+
+	a.setupTableYankFunctionality(a.securityGroupTable, a.allSecurityGroups)
+	securityGroupListFlex := ui.WrapTableInFlex(a.securityGroupTable)
+	a.pages.AddPage(ui.PageSecurityGroups, securityGroupListFlex, true, true)
+	a.tviewApp.SetFocus(a.securityGroupTable)
 }
 
 // switchToDnsDomainsListView switches to DNS domains list view
@@ -679,6 +737,7 @@ func (a *App) switchToProfile(profileName string) {
 // clearCachedData clears all cached data to force reload with new profile
 func (a *App) clearCachedData() {
 	a.allECSInstances = nil
+	a.allSecurityGroups = nil
 	a.allDomains = nil
 	a.allSLBInstances = nil
 	a.allRDSInstances = nil

@@ -8,6 +8,7 @@ import (
 // CreateMainMenu creates the main menu
 func CreateMainMenu(
 	onECS func(),
+	onSecurityGroups func(),
 	onDNS func(),
 	onSLB func(),
 	onOSS func(),
@@ -18,6 +19,7 @@ func CreateMainMenu(
 ) *tview.List {
 	list := tview.NewList().
 		AddItem("ECS Instances", "View ECS instances", 's', onECS).
+		AddItem("Security Groups", "View ECS security groups", 'g', onSecurityGroups).
 		AddItem("DNS Management", "View AliDNS domains and records", 'd', onDNS).
 		AddItem("SLB Instances", "View SLB instances", 'b', onSLB).
 		AddItem("OSS Management", "Browse OSS buckets and objects", 'o', onOSS).
