@@ -225,7 +225,7 @@ func (a *App) switchToEcsListView() {
 				}
 			},
 			func() {
-				err := ui.OpenInNvim(selectedInstance)
+				err := ui.OpenInNvimWithSuspend(selectedInstance, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
 				}
@@ -387,7 +387,7 @@ func (a *App) switchToSecurityGroupInstancesView(securityGroupId string) {
 				}
 			},
 			func() {
-				err := ui.OpenInNvim(selectedInstance)
+				err := ui.OpenInNvimWithSuspend(selectedInstance, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
 				}
@@ -520,7 +520,7 @@ func (a *App) switchToSlbListView() {
 				}
 			},
 			func() {
-				err := ui.OpenInNvim(selectedSlb)
+				err := ui.OpenInNvimWithSuspend(selectedSlb, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
 				}
@@ -732,7 +732,7 @@ func (a *App) loadOssObjectPage() {
 						}
 					},
 					func() {
-						err := ui.OpenInNvim(obj)
+						err := ui.OpenInNvimWithSuspend(obj, a.tviewApp)
 						if err != nil {
 							a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
 						}
@@ -1129,7 +1129,7 @@ func (a *App) switchToRdsListView() {
 				}
 			},
 			func() {
-				err := ui.OpenInNvim(selectedInstance)
+				err := ui.OpenInNvimWithSuspend(selectedInstance, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Edit failed: %v", err))
 				}
@@ -1228,7 +1228,7 @@ func (a *App) switchToRdsDatabasesView(instanceId string) {
 				}
 			},
 			func() {
-				err := ui.OpenInNvim(selectedDatabase)
+				err := ui.OpenInNvimWithSuspend(selectedDatabase, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Edit failed: %v", err))
 				}
@@ -1287,7 +1287,7 @@ func (a *App) switchToRdsAccountsView(instanceId string) {
 				}
 			},
 			func() {
-				err := ui.OpenInNvim(selectedAccount)
+				err := ui.OpenInNvimWithSuspend(selectedAccount, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Edit failed: %v", err))
 				}
@@ -1345,7 +1345,7 @@ func (a *App) switchToRedisListView() {
 				}
 			},
 			func() {
-				err := ui.OpenInNvim(selectedInstance)
+				err := ui.OpenInNvimWithSuspend(selectedInstance, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
 				}
@@ -1445,7 +1445,7 @@ func (a *App) switchToRedisAccountsView(instanceId string) {
 				}
 			},
 			func() {
-				err := ui.OpenInNvim(selectedAccount)
+				err := ui.OpenInNvimWithSuspend(selectedAccount, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
 				}
@@ -1506,7 +1506,7 @@ func (a *App) switchToRocketMQListView() {
 				}
 			},
 			func() {
-				err := ui.OpenInNvim(selectedInstance)
+				err := ui.OpenInNvimWithSuspend(selectedInstance, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
 				}
@@ -1615,7 +1615,7 @@ func (a *App) switchToRocketMQTopicsView(instanceId string) {
 				}
 			},
 			func() {
-				err := ui.OpenInNvim(selectedTopic)
+				err := ui.OpenInNvimWithSuspend(selectedTopic, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
 				}
@@ -1675,7 +1675,7 @@ func (a *App) switchToRocketMQGroupsView(instanceId string) {
 				}
 			},
 			func() {
-				err := ui.OpenInNvim(selectedGroup)
+				err := ui.OpenInNvimWithSuspend(selectedGroup, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
 				}

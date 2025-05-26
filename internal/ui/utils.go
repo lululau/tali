@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/atotto/clipboard"
+	"github.com/rivo/tview"
 )
 
 // CopyToClipboard copies the given data as JSON to the system clipboard
@@ -42,7 +43,10 @@ func OpenInNvim(data interface{}) error {
 		return fmt.Errorf("failed to write temporary file: %w", err)
 	}
 
-	// Open in nvim
+	// We need to suspend the tview application to avoid terminal conflicts
+	// This will be handled by the calling application
+
+	// Open in nvim with proper terminal handling
 	cmd := exec.Command("nvim", tmpFile)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -56,6 +60,39 @@ func OpenInNvim(data interface{}) error {
 	}
 
 	// Clean up temp file after nvim closes
+	os.Remove(tmpFile)
+	return nil
+}
+
+// OpenInNvimWithSuspend opens the given data as JSON in nvim with proper tview suspension
+func OpenInNvimWithSuspend(data interface{}, app *tview.Application) error {
+	jsonData, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal data to JSON: %w", err)
+	}
+
+	// Create a temporary file
+	tmpDir := os.TempDir()
+	tmpFile := filepath.Join(tmpDir, fmt.Sprintf("tali_detail_%d.json", time.Now().Unix()))
+
+	err = os.WriteFile(tmpFile, jsonData, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write temporary file: %w", err)
+	}
+
+	// Suspend the tview application to release terminal control
+	app.Suspend(func() {
+		// Open in nvim with proper terminal handling
+		cmd := exec.Command("nvim", tmpFile)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		// Run nvim and wait for it to complete
+		cmd.Run()
+	})
+
+	// Clean up temp file after nvim closes and app resumes
 	os.Remove(tmpFile)
 	return nil
 }

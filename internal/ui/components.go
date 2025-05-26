@@ -41,10 +41,6 @@ func CreateInteractiveJSONDetailView(title string, data interface{}, onCopy func
 		SetTextStyle(tcell.StyleDefault.Background(tcell.ColorReset))
 	textView.SetBorder(true).SetTitle(title).SetBackgroundColor(tcell.ColorReset)
 
-	textView.SetMouseCapture(func(action tview.MouseAction, event *tcell.EventMouse) (tview.MouseAction, *tcell.EventMouse) {
-		return action, event
-	})
-
 	return textView
 }
 
