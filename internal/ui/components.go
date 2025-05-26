@@ -313,7 +313,7 @@ func GetPageShortcuts(pageName string) string {
 		PageEcsDetail: "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
 
 		// Security Groups related pages
-		PageSecurityGroups:         "j/k: Navigate | Enter: Details | r: Rules | i: Instances | /: Search | yy: Copy | q: Back",
+		PageSecurityGroups:         "j/k: Navigate | Enter: Rules | s: Instances | /: Search | yy: Copy | q: Back",
 		PageSecurityGroupDetail:    "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
 		PageSecurityGroupRules:     "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
 		PageSecurityGroupInstances: "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
