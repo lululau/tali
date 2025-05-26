@@ -26,32 +26,35 @@ type App struct {
 	services *Services
 
 	// UI components
-	mainMenu                    *tview.List
-	ecsInstanceTable            *tview.Table
-	ecsDetailView               *tview.TextView
-	securityGroupTable          *tview.Table
-	securityGroupDetailView     *tview.TextView
-	securityGroupRulesTable     *tview.Table
-	securityGroupInstancesTable *tview.Table
-	instanceSecurityGroupsTable *tview.Table
-	dnsDomainsTable             *tview.Table
-	dnsRecordsTable             *tview.Table
-	slbInstanceTable            *tview.Table
-	slbDetailView               *tview.TextView
-	ossBucketTable              *tview.Table
-	ossObjectTable              *tview.Table
-	ossDetailView               *tview.TextView
-	rdsInstanceTable            *tview.Table
-	rdsDetailView               *tview.TextView
-	rdsDatabaseTable            *tview.Table
-	rdsAccountTable             *tview.Table
-	redisInstanceTable          *tview.Table
-	redisAccountTable           *tview.Table
-	rocketmqInstanceTable       *tview.Table
-	rocketmqTopicsTable         *tview.Table
-	rocketmqGroupsTable         *tview.Table
-	modeLine                    *tview.TextView
-	mainLayout                  *tview.Flex // Keep for now, might remove if root structure changes significantly
+	mainMenu                           *tview.List
+	ecsInstanceTable                   *tview.Table
+	ecsDetailView                      *tview.TextView
+	securityGroupTable                 *tview.Table
+	securityGroupDetailView            *tview.TextView
+	securityGroupRulesTable            *tview.Table
+	securityGroupInstancesTable        *tview.Table
+	instanceSecurityGroupsTable        *tview.Table
+	dnsDomainsTable                    *tview.Table
+	dnsRecordsTable                    *tview.Table
+	slbInstanceTable                   *tview.Table
+	slbDetailView                      *tview.TextView
+	slbListenersTable                  *tview.Table
+	slbVServerGroupsTable              *tview.Table
+	slbVServerGroupBackendServersTable *tview.Table
+	ossBucketTable                     *tview.Table
+	ossObjectTable                     *tview.Table
+	ossDetailView                      *tview.TextView
+	rdsInstanceTable                   *tview.Table
+	rdsDetailView                      *tview.TextView
+	rdsDatabaseTable                   *tview.Table
+	rdsAccountTable                    *tview.Table
+	redisInstanceTable                 *tview.Table
+	redisAccountTable                  *tview.Table
+	rocketmqInstanceTable              *tview.Table
+	rocketmqTopicsTable                *tview.Table
+	rocketmqGroupsTable                *tview.Table
+	modeLine                           *tview.TextView
+	mainLayout                         *tview.Flex // Keep for now, might remove if root structure changes significantly
 
 	// Shared Search UI
 	searchBar           *tview.InputField

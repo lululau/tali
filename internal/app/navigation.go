@@ -76,6 +76,12 @@ func (a *App) handleEscapeKey(currentPageName string) {
 		a.handleNavigation(ui.PageDnsDomains, a.dnsDomainsTable)
 	case ui.PageSlbDetail:
 		a.handleNavigation(ui.PageSlbList, a.slbInstanceTable)
+	case ui.PageSlbListeners:
+		a.handleNavigation(ui.PageSlbList, a.slbInstanceTable)
+	case ui.PageSlbVServerGroups:
+		a.handleNavigation(ui.PageSlbList, a.slbInstanceTable)
+	case ui.PageSlbVServerGroupBackendServers:
+		a.handleNavigation(ui.PageSlbVServerGroups, a.slbVServerGroupsTable)
 	case ui.PageOssObjects:
 		ui.UpdateModeLine(a.modeLine, a.currentProfile)
 		a.handleNavigation(ui.PageOssBuckets, a.ossBucketTable)
@@ -131,6 +137,12 @@ func (a *App) handleBackKey(currentPageName string) {
 		a.handleNavigation(ui.PageDnsDomains, a.dnsDomainsTable)
 	case ui.PageSlbDetail:
 		a.handleNavigation(ui.PageSlbList, a.slbInstanceTable)
+	case ui.PageSlbListeners:
+		a.handleNavigation(ui.PageSlbList, a.slbInstanceTable)
+	case ui.PageSlbVServerGroups:
+		a.handleNavigation(ui.PageSlbList, a.slbInstanceTable)
+	case ui.PageSlbVServerGroupBackendServers:
+		a.handleNavigation(ui.PageSlbVServerGroups, a.slbVServerGroupsTable)
 	case ui.PageOssObjects:
 		ui.UpdateModeLine(a.modeLine, a.currentProfile)
 		a.handleNavigation(ui.PageOssBuckets, a.ossBucketTable)
@@ -483,9 +495,100 @@ func (a *App) switchToSlbListView() {
 	})
 
 	a.setupTableYankFunctionality(a.slbInstanceTable, a.allSLBInstances)
+	a.setupSlbKeyHandlers(a.slbInstanceTable)
 	slbListFlex := ui.WrapTableInFlex(a.slbInstanceTable)
 	a.pages.AddPage(ui.PageSlbList, slbListFlex, true, true)
 	a.tviewApp.SetFocus(a.slbInstanceTable)
+}
+
+// setupSlbKeyHandlers sets up key handlers for SLB specific actions
+func (a *App) setupSlbKeyHandlers(table *tview.Table) {
+	originalInputCapture := table.GetInputCapture()
+
+	table.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Rune() {
+		case 'l': // l key handler for listeners of this SLB instance
+			row, _ := table.GetSelection()
+			if row > 0 { // Skip header row
+				if cell := table.GetCell(row, 0); cell != nil {
+					if loadBalancerId, ok := cell.GetReference().(string); ok {
+						a.switchToSlbListenersView(loadBalancerId)
+					}
+				}
+			}
+			return nil
+		case 'v': // v key handler for virtual server groups of this SLB instance
+			row, _ := table.GetSelection()
+			if row > 0 { // Skip header row
+				if cell := table.GetCell(row, 0); cell != nil {
+					if loadBalancerId, ok := cell.GetReference().(string); ok {
+						a.switchToSlbVServerGroupsView(loadBalancerId)
+					}
+				}
+			}
+			return nil
+		}
+
+		// Call original input capture if it exists
+		if originalInputCapture != nil {
+			return originalInputCapture(event)
+		}
+		return event
+	})
+}
+
+// switchToSlbListenersView switches to SLB listeners view
+func (a *App) switchToSlbListenersView(loadBalancerId string) {
+	detailedListeners, err := a.services.SLB.FetchDetailedListeners(loadBalancerId)
+	if err != nil {
+		a.showErrorModal(fmt.Sprintf("Failed to fetch listeners for SLB %s: %v", loadBalancerId, err))
+		return
+	}
+
+	a.slbListenersTable = ui.CreateSlbDetailedListenersView(detailedListeners, loadBalancerId)
+	ui.SetupTableNavigationWithSearch(a.slbListenersTable, a, nil)
+
+	a.setupTableYankFunctionality(a.slbListenersTable, detailedListeners)
+	slbListenersListFlex := ui.WrapTableInFlex(a.slbListenersTable)
+	a.pages.AddPage(ui.PageSlbListeners, slbListenersListFlex, true, true)
+	a.tviewApp.SetFocus(a.slbListenersTable)
+}
+
+// switchToSlbVServerGroupsView switches to SLB virtual server groups view
+func (a *App) switchToSlbVServerGroupsView(loadBalancerId string) {
+	detailedVServerGroups, err := a.services.SLB.FetchDetailedVServerGroups(loadBalancerId)
+	if err != nil {
+		a.showErrorModal(fmt.Sprintf("Failed to fetch virtual server groups for SLB %s: %v", loadBalancerId, err))
+		return
+	}
+
+	a.slbVServerGroupsTable = ui.CreateSlbDetailedVServerGroupsView(detailedVServerGroups, loadBalancerId)
+	ui.SetupTableNavigationWithSearch(a.slbVServerGroupsTable, a, func(row, col int) {
+		vServerGroupId := a.slbVServerGroupsTable.GetCell(row, 0).GetReference().(string)
+		a.switchToSlbVServerGroupBackendServersView(vServerGroupId)
+	})
+
+	a.setupTableYankFunctionality(a.slbVServerGroupsTable, detailedVServerGroups)
+	slbVServerGroupsListFlex := ui.WrapTableInFlex(a.slbVServerGroupsTable)
+	a.pages.AddPage(ui.PageSlbVServerGroups, slbVServerGroupsListFlex, true, true)
+	a.tviewApp.SetFocus(a.slbVServerGroupsTable)
+}
+
+// switchToSlbVServerGroupBackendServersView switches to SLB virtual server group backend servers view
+func (a *App) switchToSlbVServerGroupBackendServersView(vServerGroupId string) {
+	detailedBackendServers, err := a.services.SLB.FetchDetailedBackendServers(vServerGroupId, a.clients.ECS)
+	if err != nil {
+		a.showErrorModal(fmt.Sprintf("Failed to fetch backend servers for virtual server group %s: %v", vServerGroupId, err))
+		return
+	}
+
+	a.slbVServerGroupBackendServersTable = ui.CreateSlbDetailedBackendServersView(detailedBackendServers, vServerGroupId)
+	ui.SetupTableNavigationWithSearch(a.slbVServerGroupBackendServersTable, a, nil)
+
+	a.setupTableYankFunctionality(a.slbVServerGroupBackendServersTable, detailedBackendServers)
+	slbVServerGroupBackendServersListFlex := ui.WrapTableInFlex(a.slbVServerGroupBackendServersTable)
+	a.pages.AddPage(ui.PageSlbVServerGroupBackendServers, slbVServerGroupBackendServersListFlex, true, true)
+	a.tviewApp.SetFocus(a.slbVServerGroupBackendServersTable)
 }
 
 // switchToOssBucketListView switches to OSS bucket list view
@@ -620,6 +723,44 @@ func (a *App) setupTableYankFunctionality(table *tview.Table, data interface{}) 
 								for _, lb := range items {
 									if lb.LoadBalancerId == ref.(string) {
 										rowData = lb
+										break
+									}
+								}
+							case []slb.VServerGroup:
+								for _, vsg := range items {
+									if vsg.VServerGroupId == ref.(string) {
+										rowData = vsg
+										break
+									}
+								}
+							case []slb.BackendServerInDescribeVServerGroupAttribute:
+								for _, server := range items {
+									if server.ServerId == ref.(string) {
+										rowData = server
+										break
+									}
+								}
+							case *slb.DescribeLoadBalancerAttributeResponse:
+								// For listeners response, we'll copy the entire response
+								rowData = items
+							case []service.ListenerDetail:
+								for _, listener := range items {
+									if fmt.Sprintf("%d", listener.Port) == ref.(string) {
+										rowData = listener
+										break
+									}
+								}
+							case []service.VServerGroupDetail:
+								for _, vsg := range items {
+									if vsg.VServerGroupId == ref.(string) {
+										rowData = vsg
+										break
+									}
+								}
+							case []service.BackendServerDetail:
+								for _, server := range items {
+									if server.ServerId == ref.(string) {
+										rowData = server
 										break
 									}
 								}

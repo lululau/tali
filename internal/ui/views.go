@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"aliyun-tui-viewer/internal/service"
 	"fmt"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/alidns"
@@ -289,6 +290,187 @@ func CreateSlbDetailView(lb interface{}) *tview.Flex {
 	slbInstance := lb.(slb.LoadBalancer)
 	detailView := CreateJSONDetailView(fmt.Sprintf("SLB Details: %s", slbInstance.LoadBalancerId), lb)
 	return CreateDetailViewWithInstructions(detailView)
+}
+
+// CreateSlbListenersView creates SLB listeners list view
+func CreateSlbListenersView(listenersResponse *slb.DescribeLoadBalancerAttributeResponse, loadBalancerId string) *tview.Table {
+	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)
+	table = SetupTableWithFixedWidth(table)
+	headers := []string{"Protocol", "Port", "Backend Port", "Status", "Health Check", "Scheduler"}
+	CreateTableHeaders(table, headers)
+
+	listeners := listenersResponse.ListenerPorts.ListenerPort
+	if len(listeners) == 0 {
+		table.SetCell(1, 0, tview.NewTableCell("No listeners found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
+	} else {
+		for r, listener := range listeners {
+			// Get listener details based on protocol
+			protocol := ""
+			port := ""
+			backendPort := ""
+			status := ""
+			healthCheck := ""
+			scheduler := ""
+
+			// For simplicity, we'll show basic port info
+			// In a real implementation, you'd need to call specific describe methods for each listener type
+			port = fmt.Sprintf("%d", listener)
+			protocol = "Unknown" // Would need additional API calls to get protocol details
+			backendPort = "--"
+			status = "--"
+			healthCheck = "--"
+			scheduler = "--"
+
+			table.SetCell(r+1, 0, tview.NewTableCell(protocol).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(port).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(backendPort).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 3, tview.NewTableCell(status).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 4, tview.NewTableCell(healthCheck).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 5, tview.NewTableCell(scheduler).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+		}
+	}
+	table.SetTitle(fmt.Sprintf("Listeners for SLB: %s", loadBalancerId)).SetBorder(true)
+	return table
+}
+
+// CreateSlbDetailedListenersView creates SLB listeners list view with detailed information
+func CreateSlbDetailedListenersView(listeners []service.ListenerDetail, loadBalancerId string) *tview.Table {
+	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)
+	table = SetupTableWithFixedWidth(table)
+	headers := []string{"Protocol", "Port", "Backend Port", "Status", "Health Check", "Scheduler", "服务器组"}
+	CreateTableHeaders(table, headers)
+
+	if len(listeners) == 0 {
+		table.SetCell(1, 0, tview.NewTableCell("No listeners found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
+	} else {
+		for r, listener := range listeners {
+			backendPortStr := "--"
+			if listener.BackendPort > 0 {
+				backendPortStr = fmt.Sprintf("%d", listener.BackendPort)
+			}
+
+			vServerGroupStr := "--"
+			if listener.VServerGroupName != "" {
+				vServerGroupStr = listener.VServerGroupName
+			} else if listener.VServerGroupId != "" {
+				vServerGroupStr = listener.VServerGroupId
+			}
+
+			table.SetCell(r+1, 0, tview.NewTableCell(listener.Protocol).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(fmt.Sprintf("%d", listener.Port)).SetTextColor(tcell.ColorWhite).SetReference(fmt.Sprintf("%d", listener.Port)).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(backendPortStr).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 3, tview.NewTableCell(listener.Status).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 4, tview.NewTableCell(listener.HealthCheck).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 5, tview.NewTableCell(listener.Scheduler).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 6, tview.NewTableCell(vServerGroupStr).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+		}
+	}
+	table.SetTitle(fmt.Sprintf("Listeners for SLB: %s", loadBalancerId)).SetBorder(true)
+	return table
+}
+
+// CreateSlbVServerGroupsView creates SLB virtual server groups list view
+func CreateSlbVServerGroupsView(vServerGroups []slb.VServerGroup, loadBalancerId string) *tview.Table {
+	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)
+	table = SetupTableWithFixedWidth(table)
+	headers := []string{"VServer Group ID", "VServer Group Name", "Backend Server Count"}
+	CreateTableHeaders(table, headers)
+
+	if len(vServerGroups) == 0 {
+		table.SetCell(1, 0, tview.NewTableCell("No virtual server groups found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
+	} else {
+		for r, vsg := range vServerGroups {
+			// For now, we'll show "N/A" for backend count since we need to fetch it separately
+			backendCount := "N/A"
+
+			table.SetCell(r+1, 0, tview.NewTableCell(vsg.VServerGroupId).SetTextColor(tcell.ColorWhite).SetReference(vsg.VServerGroupId).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(vsg.VServerGroupName).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(backendCount).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+		}
+	}
+	table.SetTitle(fmt.Sprintf("Virtual Server Groups for SLB: %s", loadBalancerId)).SetBorder(true)
+	return table
+}
+
+// CreateSlbDetailedVServerGroupsView creates SLB virtual server groups list view with detailed information
+func CreateSlbDetailedVServerGroupsView(vServerGroups []service.VServerGroupDetail, loadBalancerId string) *tview.Table {
+	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)
+	table = SetupTableWithFixedWidth(table)
+	headers := []string{"VServer Group ID", "VServer Group Name", "Backend Server Count", "关联监听"}
+	CreateTableHeaders(table, headers)
+
+	if len(vServerGroups) == 0 {
+		table.SetCell(1, 0, tview.NewTableCell("No virtual server groups found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
+	} else {
+		for r, vsg := range vServerGroups {
+			backendCount := fmt.Sprintf("%d", vsg.BackendServerCount)
+
+			associatedListenersStr := "--"
+			if len(vsg.AssociatedListeners) > 0 {
+				associatedListenersStr = ""
+				for i, listener := range vsg.AssociatedListeners {
+					if i > 0 {
+						associatedListenersStr += ", "
+					}
+					associatedListenersStr += listener
+				}
+			}
+
+			table.SetCell(r+1, 0, tview.NewTableCell(vsg.VServerGroupId).SetTextColor(tcell.ColorWhite).SetReference(vsg.VServerGroupId).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(vsg.VServerGroupName).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(backendCount).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 3, tview.NewTableCell(associatedListenersStr).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+		}
+	}
+	table.SetTitle(fmt.Sprintf("Virtual Server Groups for SLB: %s", loadBalancerId)).SetBorder(true)
+	return table
+}
+
+// CreateSlbVServerGroupBackendServersView creates backend servers list view for a virtual server group
+func CreateSlbVServerGroupBackendServersView(backendServers []slb.BackendServerInDescribeVServerGroupAttribute, vServerGroupId string) *tview.Table {
+	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)
+	table = SetupTableWithFixedWidth(table)
+	headers := []string{"Server ID", "Port", "Weight", "Type", "Description"}
+	CreateTableHeaders(table, headers)
+
+	if len(backendServers) == 0 {
+		table.SetCell(1, 0, tview.NewTableCell("No backend servers found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
+	} else {
+		for r, server := range backendServers {
+			table.SetCell(r+1, 0, tview.NewTableCell(server.ServerId).SetTextColor(tcell.ColorWhite).SetReference(server.ServerId).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(fmt.Sprintf("%d", server.Port)).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(fmt.Sprintf("%d", server.Weight)).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 3, tview.NewTableCell(server.Type).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 4, tview.NewTableCell(server.Description).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+		}
+	}
+	table.SetTitle(fmt.Sprintf("Backend Servers for VServer Group: %s", vServerGroupId)).SetBorder(true)
+	return table
+}
+
+// CreateSlbDetailedBackendServersView creates backend servers list view with detailed ECS information
+func CreateSlbDetailedBackendServersView(backendServers []service.BackendServerDetail, vServerGroupId string) *tview.Table {
+	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)
+	table = SetupTableWithFixedWidth(table)
+	headers := []string{"Server ID", "ECS名称", "Port", "Weight", "Type", "内网IP", "公网IP/EIP", "Description"}
+	CreateTableHeaders(table, headers)
+
+	if len(backendServers) == 0 {
+		table.SetCell(1, 0, tview.NewTableCell("No backend servers found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
+	} else {
+		for r, server := range backendServers {
+			table.SetCell(r+1, 0, tview.NewTableCell(server.ServerId).SetTextColor(tcell.ColorWhite).SetReference(server.ServerId).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(server.InstanceName).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(fmt.Sprintf("%d", server.Port)).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 3, tview.NewTableCell(fmt.Sprintf("%d", server.Weight)).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 4, tview.NewTableCell(server.Type).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 5, tview.NewTableCell(server.PrivateIpAddress).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 6, tview.NewTableCell(server.PublicIpAddress).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 7, tview.NewTableCell(server.Description).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+		}
+	}
+	table.SetTitle(fmt.Sprintf("Backend Servers for VServer Group: %s", vServerGroupId)).SetBorder(true)
+	return table
 }
 
 // CreateOssBucketListView creates OSS buckets list view
