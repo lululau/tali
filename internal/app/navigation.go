@@ -66,6 +66,12 @@ func (a *App) handleEscapeKey(currentPageName string) {
 		a.handleNavigation(ui.PageEcsList, a.ecsInstanceTable)
 	case ui.PageSecurityGroupDetail:
 		a.handleNavigation(ui.PageSecurityGroups, a.securityGroupTable)
+	case ui.PageSecurityGroupRules:
+		a.handleNavigation(ui.PageSecurityGroups, a.securityGroupTable)
+	case ui.PageSecurityGroupInstances:
+		a.handleNavigation(ui.PageSecurityGroups, a.securityGroupTable)
+	case ui.PageInstanceSecurityGroups:
+		a.handleNavigation(ui.PageEcsList, a.ecsInstanceTable)
 	case ui.PageDnsRecords:
 		a.handleNavigation(ui.PageDnsDomains, a.dnsDomainsTable)
 	case ui.PageSlbDetail:
@@ -115,6 +121,12 @@ func (a *App) handleBackKey(currentPageName string) {
 		a.handleNavigation(ui.PageEcsList, a.ecsInstanceTable)
 	case ui.PageSecurityGroupDetail:
 		a.handleNavigation(ui.PageSecurityGroups, a.securityGroupTable)
+	case ui.PageSecurityGroupRules:
+		a.handleNavigation(ui.PageSecurityGroups, a.securityGroupTable)
+	case ui.PageSecurityGroupInstances:
+		a.handleNavigation(ui.PageSecurityGroups, a.securityGroupTable)
+	case ui.PageInstanceSecurityGroups:
+		a.handleNavigation(ui.PageEcsList, a.ecsInstanceTable)
 	case ui.PageDnsRecords:
 		a.handleNavigation(ui.PageDnsDomains, a.dnsDomainsTable)
 	case ui.PageSlbDetail:
@@ -212,9 +224,36 @@ func (a *App) switchToEcsListView() {
 	})
 
 	a.setupTableYankFunctionality(a.ecsInstanceTable, a.allECSInstances)
+	a.setupEcsKeyHandlers(a.ecsInstanceTable)
 	ecsListFlex := ui.WrapTableInFlex(a.ecsInstanceTable)
 	a.pages.AddPage(ui.PageEcsList, ecsListFlex, true, true)
 	a.tviewApp.SetFocus(a.ecsInstanceTable)
+}
+
+// setupEcsKeyHandlers sets up key handlers for ECS specific actions
+func (a *App) setupEcsKeyHandlers(table *tview.Table) {
+	originalInputCapture := table.GetInputCapture()
+
+	table.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Rune() {
+		case 'g': // g key handler for security groups of this instance
+			row, _ := table.GetSelection()
+			if row > 0 { // Skip header row
+				if cell := table.GetCell(row, 0); cell != nil {
+					if instanceId, ok := cell.GetReference().(string); ok {
+						a.switchToInstanceSecurityGroupsView(instanceId)
+					}
+				}
+			}
+			return nil
+		}
+
+		// Call original input capture if it exists
+		if originalInputCapture != nil {
+			return originalInputCapture(event)
+		}
+		return event
+	})
 }
 
 // switchToSecurityGroupsListView switches to security groups list view
@@ -230,20 +269,85 @@ func (a *App) switchToSecurityGroupsListView() {
 	a.securityGroupTable = ui.CreateSecurityGroupsListView(a.allSecurityGroups)
 	ui.SetupTableNavigationWithSearch(a.securityGroupTable, a, func(row, col int) {
 		securityGroupId := a.securityGroupTable.GetCell(row, 0).GetReference().(string)
-		var selectedSecurityGroup interface{}
-		for _, sg := range a.allSecurityGroups {
-			if sg.SecurityGroupId == securityGroupId {
-				selectedSecurityGroup = sg
+		// 回车键进入安全组规则列表
+		a.switchToSecurityGroupRulesView(securityGroupId)
+	})
+
+	a.setupTableYankFunctionality(a.securityGroupTable, a.allSecurityGroups)
+	a.setupSecurityGroupKeyHandlers(a.securityGroupTable)
+	securityGroupListFlex := ui.WrapTableInFlex(a.securityGroupTable)
+	a.pages.AddPage(ui.PageSecurityGroups, securityGroupListFlex, true, true)
+	a.tviewApp.SetFocus(a.securityGroupTable)
+}
+
+// setupSecurityGroupKeyHandlers sets up key handlers for security group specific actions
+func (a *App) setupSecurityGroupKeyHandlers(table *tview.Table) {
+	originalInputCapture := table.GetInputCapture()
+
+	table.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Rune() {
+		case 's': // s key handler for instances using this security group
+			row, _ := table.GetSelection()
+			if row > 0 { // Skip header row
+				if cell := table.GetCell(row, 0); cell != nil {
+					if securityGroupId, ok := cell.GetReference().(string); ok {
+						a.switchToSecurityGroupInstancesView(securityGroupId)
+					}
+				}
+			}
+			return nil
+		}
+
+		// Call original input capture if it exists
+		if originalInputCapture != nil {
+			return originalInputCapture(event)
+		}
+		return event
+	})
+}
+
+// switchToSecurityGroupRulesView switches to security group rules view
+func (a *App) switchToSecurityGroupRulesView(securityGroupId string) {
+	rulesResponse, err := a.services.ECS.FetchSecurityGroupRules(securityGroupId)
+	if err != nil {
+		a.showErrorModal(fmt.Sprintf("Failed to fetch security group rules for %s: %v", securityGroupId, err))
+		return
+	}
+
+	a.securityGroupRulesTable = ui.CreateSecurityGroupRulesView(rulesResponse)
+	ui.SetupTableNavigationWithSearch(a.securityGroupRulesTable, a, nil)
+
+	a.setupTableYankFunctionality(a.securityGroupRulesTable, rulesResponse)
+	securityGroupRulesListFlex := ui.WrapTableInFlex(a.securityGroupRulesTable)
+	a.pages.AddPage(ui.PageSecurityGroupRules, securityGroupRulesListFlex, true, true)
+	a.tviewApp.SetFocus(a.securityGroupRulesTable)
+}
+
+// switchToSecurityGroupInstancesView switches to instances using a security group
+func (a *App) switchToSecurityGroupInstancesView(securityGroupId string) {
+	instances, err := a.services.ECS.FetchInstancesBySecurityGroup(securityGroupId)
+	if err != nil {
+		a.showErrorModal(fmt.Sprintf("Failed to fetch instances for security group %s: %v", securityGroupId, err))
+		return
+	}
+
+	a.securityGroupInstancesTable = ui.CreateSecurityGroupInstancesView(instances, securityGroupId)
+	ui.SetupTableNavigationWithSearch(a.securityGroupInstancesTable, a, func(row, col int) {
+		instanceId := a.securityGroupInstancesTable.GetCell(row, 0).GetReference().(string)
+		var selectedInstance interface{}
+		for _, inst := range instances {
+			if inst.InstanceId == instanceId {
+				selectedInstance = inst
 				break
 			}
 		}
-		a.currentDetailData = selectedSecurityGroup
+		a.currentDetailData = selectedInstance
 		detailView, _ := ui.CreateInteractiveJSONDetailViewWithSearch(
-			fmt.Sprintf("Security Group Details: %s", securityGroupId),
-			selectedSecurityGroup,
+			fmt.Sprintf("ECS Details: %s", instanceId),
+			selectedInstance,
 			a,
 			func() {
-				err := ui.CopyToClipboard(selectedSecurityGroup)
+				err := ui.CopyToClipboard(selectedInstance)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Failed to copy: %v", err))
 				} else {
@@ -251,24 +355,45 @@ func (a *App) switchToSecurityGroupsListView() {
 				}
 			},
 			func() {
-				err := ui.OpenInNvim(selectedSecurityGroup)
+				err := ui.OpenInNvim(selectedInstance)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
 				}
 			},
 		)
 		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
-		a.pages.AddPage(ui.PageSecurityGroupDetail, detailViewWithInstructions, true, true)
+		a.pages.AddPage(ui.PageEcsDetail, detailViewWithInstructions, true, true)
 		if detailViewWithInstructions.GetItemCount() > 1 {
-			a.securityGroupDetailView = detailViewWithInstructions.GetItem(1).(*tview.TextView)
+			a.ecsDetailView = detailViewWithInstructions.GetItem(1).(*tview.TextView)
 		}
-		a.tviewApp.SetFocus(a.securityGroupDetailView)
+		a.tviewApp.SetFocus(a.ecsDetailView)
 	})
 
-	a.setupTableYankFunctionality(a.securityGroupTable, a.allSecurityGroups)
-	securityGroupListFlex := ui.WrapTableInFlex(a.securityGroupTable)
-	a.pages.AddPage(ui.PageSecurityGroups, securityGroupListFlex, true, true)
-	a.tviewApp.SetFocus(a.securityGroupTable)
+	a.setupTableYankFunctionality(a.securityGroupInstancesTable, instances)
+	securityGroupInstancesListFlex := ui.WrapTableInFlex(a.securityGroupInstancesTable)
+	a.pages.AddPage(ui.PageSecurityGroupInstances, securityGroupInstancesListFlex, true, true)
+	a.tviewApp.SetFocus(a.securityGroupInstancesTable)
+}
+
+// switchToInstanceSecurityGroupsView switches to security groups for an instance
+func (a *App) switchToInstanceSecurityGroupsView(instanceId string) {
+	securityGroups, err := a.services.ECS.FetchSecurityGroupsByInstance(instanceId)
+	if err != nil {
+		a.showErrorModal(fmt.Sprintf("Failed to fetch security groups for instance %s: %v", instanceId, err))
+		return
+	}
+
+	a.instanceSecurityGroupsTable = ui.CreateInstanceSecurityGroupsView(securityGroups, instanceId)
+	ui.SetupTableNavigationWithSearch(a.instanceSecurityGroupsTable, a, func(row, col int) {
+		securityGroupId := a.instanceSecurityGroupsTable.GetCell(row, 0).GetReference().(string)
+		// 进入安全组规则视图
+		a.switchToSecurityGroupRulesView(securityGroupId)
+	})
+
+	a.setupTableYankFunctionality(a.instanceSecurityGroupsTable, securityGroups)
+	instanceSecurityGroupsListFlex := ui.WrapTableInFlex(a.instanceSecurityGroupsTable)
+	a.pages.AddPage(ui.PageInstanceSecurityGroups, instanceSecurityGroupsListFlex, true, true)
+	a.tviewApp.SetFocus(a.instanceSecurityGroupsTable)
 }
 
 // switchToDnsDomainsListView switches to DNS domains list view

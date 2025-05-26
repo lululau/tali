@@ -95,6 +95,132 @@ func CreateSecurityGroupDetailView(securityGroup interface{}) *tview.Flex {
 	return CreateDetailViewWithInstructions(detailView)
 }
 
+// CreateSecurityGroupRulesView creates security group rules view
+func CreateSecurityGroupRulesView(rulesResponse *ecs.DescribeSecurityGroupAttributeResponse) *tview.Table {
+	table := tview.NewTable().
+		SetBorders(true).
+		SetSelectable(true, false)
+	table = SetupTableWithFixedWidth(table)
+
+	// 合并入站和出站规则
+	allRules := []interface{}{}
+
+	// 添加入站规则
+	for _, rule := range rulesResponse.Permissions.Permission {
+		ruleData := map[string]interface{}{
+			"Direction":     "Ingress",
+			"IpProtocol":    rule.IpProtocol,
+			"PortRange":     rule.PortRange,
+			"SourceCidrIp":  rule.SourceCidrIp,
+			"SourceGroupId": rule.SourceGroupId,
+			"Policy":        rule.Policy,
+			"Priority":      rule.Priority,
+			"NicType":       rule.NicType,
+			"Description":   rule.Description,
+		}
+		allRules = append(allRules, ruleData)
+	}
+
+	headers := []string{"Direction", "Protocol", "Port Range", "Source/Dest", "Policy", "Priority", "Description"}
+	CreateTableHeaders(table, headers)
+
+	if len(allRules) == 0 {
+		table.SetCell(1, 0, tview.NewTableCell("No security group rules found.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
+	} else {
+		for r, ruleInterface := range allRules {
+			rule := ruleInterface.(map[string]interface{})
+
+			// 确定源/目标
+			sourceDest := ""
+			if rule["SourceCidrIp"] != nil && rule["SourceCidrIp"].(string) != "" {
+				sourceDest = rule["SourceCidrIp"].(string)
+			} else if rule["SourceGroupId"] != nil && rule["SourceGroupId"].(string) != "" {
+				sourceDest = rule["SourceGroupId"].(string)
+			}
+
+			table.SetCell(r+1, 0, tview.NewTableCell(rule["Direction"].(string)).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(rule["IpProtocol"].(string)).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(rule["PortRange"].(string)).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 3, tview.NewTableCell(sourceDest).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 4, tview.NewTableCell(rule["Policy"].(string)).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 5, tview.NewTableCell(fmt.Sprintf("%v", rule["Priority"])).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 6, tview.NewTableCell(rule["Description"].(string)).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+		}
+	}
+	table.SetTitle(fmt.Sprintf("Security Group Rules: %s", rulesResponse.SecurityGroupId)).SetBorder(true)
+	return table
+}
+
+// CreateSecurityGroupInstancesView creates view for instances using a security group
+func CreateSecurityGroupInstancesView(instances []ecs.Instance, securityGroupId string) *tview.Table {
+	table := tview.NewTable().
+		SetBorders(true).
+		SetSelectable(true, false)
+	table = SetupTableWithFixedWidth(table)
+	headers := []string{"Instance ID", "Status", "Zone", "CPU/RAM", "Private IP", "Public IP", "Name"}
+	CreateTableHeaders(table, headers)
+
+	if len(instances) == 0 {
+		table.SetCell(1, 0, tview.NewTableCell("No instances using this security group.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
+	} else {
+		for r, instance := range instances {
+			// Private IP
+			privateIP := "N/A"
+			if len(instance.VpcAttributes.PrivateIpAddress.IpAddress) > 0 {
+				privateIP = instance.VpcAttributes.PrivateIpAddress.IpAddress[0]
+			} else if len(instance.InnerIpAddress.IpAddress) > 0 {
+				privateIP = instance.InnerIpAddress.IpAddress[0]
+			}
+
+			// Public IP
+			publicIP := "N/A"
+			if len(instance.PublicIpAddress.IpAddress) > 0 {
+				publicIP = instance.PublicIpAddress.IpAddress[0]
+			} else if instance.EipAddress.IpAddress != "" {
+				publicIP = instance.EipAddress.IpAddress
+			}
+
+			// CPU/RAM configuration
+			cpuRam := fmt.Sprintf("%dC/%dG", instance.Cpu, instance.Memory/1024)
+
+			table.SetCell(r+1, 0, tview.NewTableCell(instance.InstanceId).SetTextColor(tcell.ColorWhite).SetReference(instance.InstanceId).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(instance.Status).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(instance.ZoneId).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 3, tview.NewTableCell(cpuRam).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 4, tview.NewTableCell(privateIP).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 5, tview.NewTableCell(publicIP).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 6, tview.NewTableCell(instance.InstanceName).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+		}
+	}
+	table.SetTitle(fmt.Sprintf("Instances using Security Group: %s", securityGroupId)).SetBorder(true)
+	return table
+}
+
+// CreateInstanceSecurityGroupsView creates view for security groups of an instance
+func CreateInstanceSecurityGroupsView(securityGroups []ecs.SecurityGroup, instanceId string) *tview.Table {
+	table := tview.NewTable().
+		SetBorders(true).
+		SetSelectable(true, false)
+	table = SetupTableWithFixedWidth(table)
+	headers := []string{"Security Group ID", "Name", "Description", "VPC ID", "Type", "Creation Time"}
+	CreateTableHeaders(table, headers)
+
+	if len(securityGroups) == 0 {
+		table.SetCell(1, 0, tview.NewTableCell("No security groups found for this instance.").SetSelectable(false).SetExpansion(len(headers)).SetAlign(tview.AlignCenter))
+	} else {
+		for r, sg := range securityGroups {
+			table.SetCell(r+1, 0, tview.NewTableCell(sg.SecurityGroupId).SetTextColor(tcell.ColorWhite).SetReference(sg.SecurityGroupId).SetExpansion(1))
+			table.SetCell(r+1, 1, tview.NewTableCell(sg.SecurityGroupName).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 2, tview.NewTableCell(sg.Description).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 3, tview.NewTableCell(sg.VpcId).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 4, tview.NewTableCell(sg.SecurityGroupType).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 5, tview.NewTableCell(sg.CreationTime).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+		}
+	}
+	table.SetTitle(fmt.Sprintf("Security Groups for Instance: %s", instanceId)).SetBorder(true)
+	return table
+}
+
 // CreateDnsDomainsListView creates DNS domains list view
 func CreateDnsDomainsListView(domains []alidns.DomainInDescribeDomains) *tview.Table {
 	table := tview.NewTable().SetBorders(true).SetSelectable(true, false)

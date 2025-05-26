@@ -90,3 +90,96 @@ func (s *ECSService) FetchSecurityGroups() ([]ecs.SecurityGroup, error) {
 
 	return allSecurityGroups, nil
 }
+
+// FetchSecurityGroupRules retrieves security group rules for a specific security group
+func (s *ECSService) FetchSecurityGroupRules(securityGroupId string) (*ecs.DescribeSecurityGroupAttributeResponse, error) {
+	request := ecs.CreateDescribeSecurityGroupAttributeRequest()
+	request.Scheme = "https"
+	request.SecurityGroupId = securityGroupId
+
+	response, err := s.client.DescribeSecurityGroupAttribute(request)
+	if err != nil {
+		return nil, fmt.Errorf("describing security group rules for %s: %w", securityGroupId, err)
+	}
+
+	return response, nil
+}
+
+// FetchInstancesBySecurityGroup retrieves ECS instances that use a specific security group
+func (s *ECSService) FetchInstancesBySecurityGroup(securityGroupId string) ([]ecs.Instance, error) {
+	var allInstances []ecs.Instance
+	pageNumber := 1
+	pageSize := 100
+
+	for {
+		request := ecs.CreateDescribeInstancesRequest()
+		request.Scheme = "https"
+		request.PageNumber = requests.NewInteger(pageNumber)
+		request.PageSize = requests.NewInteger(pageSize)
+		request.SecurityGroupId = securityGroupId
+
+		response, err := s.client.DescribeInstances(request)
+		if err != nil {
+			return nil, fmt.Errorf("describing instances for security group %s (page %d): %w", securityGroupId, pageNumber, err)
+		}
+
+		// 添加当前页的实例到总列表
+		allInstances = append(allInstances, response.Instances.Instance...)
+
+		// 检查是否还有更多页面
+		if len(response.Instances.Instance) < pageSize {
+			break
+		}
+
+		if len(allInstances) >= response.TotalCount {
+			break
+		}
+
+		pageNumber++
+	}
+
+	return allInstances, nil
+}
+
+// FetchSecurityGroupsByInstance retrieves security groups for a specific ECS instance
+func (s *ECSService) FetchSecurityGroupsByInstance(instanceId string) ([]ecs.SecurityGroup, error) {
+	// 首先获取实例详情以获取安全组ID列表
+	request := ecs.CreateDescribeInstancesRequest()
+	request.Scheme = "https"
+	request.InstanceIds = fmt.Sprintf("[\"%s\"]", instanceId)
+
+	response, err := s.client.DescribeInstances(request)
+	if err != nil {
+		return nil, fmt.Errorf("describing instance %s: %w", instanceId, err)
+	}
+
+	if len(response.Instances.Instance) == 0 {
+		return []ecs.SecurityGroup{}, nil
+	}
+
+	instance := response.Instances.Instance[0]
+	securityGroupIds := instance.SecurityGroupIds.SecurityGroupId
+
+	if len(securityGroupIds) == 0 {
+		return []ecs.SecurityGroup{}, nil
+	}
+
+	// 获取安全组详情
+	var securityGroups []ecs.SecurityGroup
+	for _, sgId := range securityGroupIds {
+		sgRequest := ecs.CreateDescribeSecurityGroupsRequest()
+		sgRequest.Scheme = "https"
+		sgRequest.SecurityGroupIds = fmt.Sprintf("[\"%s\"]", sgId)
+
+		sgResponse, err := s.client.DescribeSecurityGroups(sgRequest)
+		if err != nil {
+			// 记录错误但继续处理其他安全组
+			fmt.Printf("Warning: failed to describe security group %s: %v\n", sgId, err)
+			continue
+		}
+
+		securityGroups = append(securityGroups, sgResponse.SecurityGroups.SecurityGroup...)
+	}
+
+	return securityGroups, nil
+}
