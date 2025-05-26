@@ -33,6 +33,31 @@ A Terminal User Interface (TUI) application for managing Alibaba Cloud resources
 
 ## Installation
 
+### Using Homebrew (macOS)
+
+The easiest way to install tali on macOS is using Homebrew:
+
+```bash
+# Add the tap (replace with your actual repository)
+brew tap lululau/tali
+
+# Install tali
+brew install tali
+```
+
+Or install directly from the formula URL:
+
+```bash
+brew install https://raw.githubusercontent.com/lululau/tali/main/tali.rb
+```
+
+For detailed Homebrew setup instructions, including creating your own tap, see [HOMEBREW.md](HOMEBREW.md).
+
+**For maintainers**: Use the provided script to generate the formula:
+```bash
+./scripts/generate-formula.sh 1.0.0 lululau
+```
+
 ### From Source
 
 1. Clone the repository:
