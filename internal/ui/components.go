@@ -306,3 +306,124 @@ func UpdateModeLineWithPageInfo(modeLine *tview.TextView, profileName string, pa
 	modeLineText := leftText + spacing + pageInfo
 	modeLine.SetText(modeLineText)
 }
+
+// GetPageShortcuts returns the shortcut help text for a given page
+func GetPageShortcuts(pageName string) string {
+	shortcuts := map[string]string{
+		PageMainMenu: "1-8: Select service | Q: Quit | O: Switch profile",
+
+		// ECS related pages
+		PageEcsList:   "j/k: Navigate | Enter: Details | /: Search | n/N: Next/Prev search | yy: Copy | q: Back | O: Profile",
+		PageEcsDetail: "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
+
+		// Security Groups related pages
+		PageSecurityGroups:         "j/k: Navigate | Enter: Details | r: Rules | i: Instances | /: Search | yy: Copy | q: Back",
+		PageSecurityGroupDetail:    "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
+		PageSecurityGroupRules:     "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
+		PageSecurityGroupInstances: "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
+		PageInstanceSecurityGroups: "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
+
+		// DNS related pages
+		PageDnsDomains: "j/k: Navigate | Enter: Records | /: Search | yy: Copy | q: Back | Q: Quit",
+		PageDnsRecords: "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
+
+		// SLB related pages
+		PageSlbList:                       "j/k: Navigate | Enter: Details | l: Listeners | v: VServer Groups | /: Search | yy: Copy | q: Back",
+		PageSlbDetail:                     "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
+		PageSlbListeners:                  "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
+		PageSlbVServerGroups:              "j/k: Navigate | Enter: Backend Servers | /: Search | yy: Copy | q: Back | Q: Quit",
+		PageSlbVServerGroupBackendServers: "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
+
+		// OSS related pages
+		PageOssBuckets: "j/k: Navigate | Enter: Objects | /: Search | yy: Copy | q: Back | Q: Quit",
+		PageOssObjects: "j/k: Navigate | Enter: Details | [/]: Prev/Next page | 0: First page | /: Search | yy: Copy | q: Back",
+
+		// RDS related pages
+		PageRdsList:      "j/k: Navigate | Enter: Details | D: Databases | A: Accounts | /: Search | yy: Copy | q: Back",
+		PageRdsDetail:    "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
+		PageRdsDatabases: "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
+		PageRdsAccounts:  "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
+
+		// Redis related pages
+		PageRedisList:     "j/k: Navigate | Enter: Details | A: Accounts | /: Search | yy: Copy | q: Back | Q: Quit",
+		PageRedisAccounts: "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
+
+		// RocketMQ related pages
+		PageRocketMQList:   "j/k: Navigate | Enter: Details | T: Topics | G: Groups | /: Search | yy: Copy | q: Back",
+		PageRocketMQTopics: "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
+		PageRocketMQGroups: "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
+
+		// Detail pages (using string literals for non-constant page names)
+		"ossObjectDetail":     "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
+		"rdsDatabaseDetail":   "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
+		"rdsAccountDetail":    "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
+		"redisDetail":         "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
+		"redisAccountDetail":  "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
+		"rocketmqDetail":      "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
+		"rocketmqTopicDetail": "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
+		"rocketmqGroupDetail": "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
+	}
+
+	if shortcut, exists := shortcuts[pageName]; exists {
+		return shortcut
+	}
+	return "q/Esc: Back | Q: Quit | O: Switch profile"
+}
+
+// UpdateModeLineWithShortcuts updates the mode line with profile and current page shortcuts
+func UpdateModeLineWithShortcuts(modeLine *tview.TextView, profileName string, pageName string) {
+	shortcuts := GetPageShortcuts(pageName)
+	leftText := fmt.Sprintf(" Profile: %s ", profileName)
+	rightText := fmt.Sprintf(" %s ", shortcuts)
+
+	// Get terminal width (approximate, will be dynamically adjusted)
+	width := 150 // Default width
+
+	// Calculate spacing to separate profile and shortcuts
+	spacingNeeded := width - len(leftText) - len(rightText)
+	if spacingNeeded < 3 {
+		spacingNeeded = 3
+	}
+	spacing := ""
+	for i := 0; i < spacingNeeded; i++ {
+		spacing += " "
+	}
+
+	modeLineText := leftText + spacing + rightText
+	modeLine.SetText(modeLineText)
+}
+
+// UpdateModeLineWithPageInfoAndShortcuts updates the mode line with profile, page info, and shortcuts
+func UpdateModeLineWithPageInfoAndShortcuts(modeLine *tview.TextView, profileName string, pageName string, pageInfo string) {
+	shortcuts := GetPageShortcuts(pageName)
+	leftText := fmt.Sprintf(" Profile: %s ", profileName)
+	middleText := fmt.Sprintf(" %s ", pageInfo)
+	rightText := fmt.Sprintf(" %s ", shortcuts)
+
+	// Get terminal width (approximate)
+	width := 180 // Default width for wider displays
+
+	// Calculate spacing
+	totalFixedLength := len(leftText) + len(middleText) + len(rightText)
+	spacingNeeded := width - totalFixedLength
+	if spacingNeeded < 6 {
+		spacingNeeded = 6
+	}
+
+	// Distribute spacing
+	leftSpacing := spacingNeeded / 2
+	rightSpacing := spacingNeeded - leftSpacing
+
+	leftSpacingStr := ""
+	for i := 0; i < leftSpacing; i++ {
+		leftSpacingStr += " "
+	}
+
+	rightSpacingStr := ""
+	for i := 0; i < rightSpacing; i++ {
+		rightSpacingStr += " "
+	}
+
+	modeLineText := leftText + leftSpacingStr + middleText + rightSpacingStr + rightText
+	modeLine.SetText(modeLineText)
+}

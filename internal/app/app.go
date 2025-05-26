@@ -224,6 +224,9 @@ func (a *App) initializeUI() {
 	// Set the main layout as root
 	a.tviewApp.SetRoot(a.mainLayout, true)
 
+	// Initialize mode line with main menu shortcuts
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageMainMenu)
+
 	// Set up global input capture
 	a.setupGlobalInputCapture()
 }

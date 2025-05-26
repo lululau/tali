@@ -180,6 +180,10 @@ func (a *App) handleBackKey(currentPageName string) {
 // handleNavigation handles page navigation
 func (a *App) handleNavigation(targetPage string, focusItem tview.Primitive) {
 	a.pages.SwitchToPage(targetPage)
+
+	// Update mode line with shortcuts for the current page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, targetPage)
+
 	if focusItem != nil {
 		a.tviewApp.SetFocus(focusItem)
 	} else if targetPage == ui.PageMainMenu {
@@ -232,6 +236,10 @@ func (a *App) switchToEcsListView() {
 		if detailViewWithInstructions.GetItemCount() > 1 {
 			a.ecsDetailView = detailViewWithInstructions.GetItem(1).(*tview.TextView)
 		}
+
+		// Update mode line with shortcuts for ECS detail page
+		ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageEcsDetail)
+
 		a.tviewApp.SetFocus(a.ecsDetailView)
 	})
 
@@ -239,6 +247,10 @@ func (a *App) switchToEcsListView() {
 	a.setupEcsKeyHandlers(a.ecsInstanceTable)
 	ecsListFlex := ui.WrapTableInFlex(a.ecsInstanceTable)
 	a.pages.AddPage(ui.PageEcsList, ecsListFlex, true, true)
+
+	// Update mode line with shortcuts for ECS list page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageEcsList)
+
 	a.tviewApp.SetFocus(a.ecsInstanceTable)
 }
 
@@ -289,6 +301,10 @@ func (a *App) switchToSecurityGroupsListView() {
 	a.setupSecurityGroupKeyHandlers(a.securityGroupTable)
 	securityGroupListFlex := ui.WrapTableInFlex(a.securityGroupTable)
 	a.pages.AddPage(ui.PageSecurityGroups, securityGroupListFlex, true, true)
+
+	// Update mode line with shortcuts for security groups page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageSecurityGroups)
+
 	a.tviewApp.SetFocus(a.securityGroupTable)
 }
 
@@ -332,6 +348,10 @@ func (a *App) switchToSecurityGroupRulesView(securityGroupId string) {
 	a.setupTableYankFunctionality(a.securityGroupRulesTable, rulesResponse)
 	securityGroupRulesListFlex := ui.WrapTableInFlex(a.securityGroupRulesTable)
 	a.pages.AddPage(ui.PageSecurityGroupRules, securityGroupRulesListFlex, true, true)
+
+	// Update mode line with shortcuts for security group rules page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageSecurityGroupRules)
+
 	a.tviewApp.SetFocus(a.securityGroupRulesTable)
 }
 
@@ -378,12 +398,20 @@ func (a *App) switchToSecurityGroupInstancesView(securityGroupId string) {
 		if detailViewWithInstructions.GetItemCount() > 1 {
 			a.ecsDetailView = detailViewWithInstructions.GetItem(1).(*tview.TextView)
 		}
+
+		// Update mode line with shortcuts for ECS detail page
+		ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageEcsDetail)
+
 		a.tviewApp.SetFocus(a.ecsDetailView)
 	})
 
 	a.setupTableYankFunctionality(a.securityGroupInstancesTable, instances)
 	securityGroupInstancesListFlex := ui.WrapTableInFlex(a.securityGroupInstancesTable)
 	a.pages.AddPage(ui.PageSecurityGroupInstances, securityGroupInstancesListFlex, true, true)
+
+	// Update mode line with shortcuts for security group instances page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageSecurityGroupInstances)
+
 	a.tviewApp.SetFocus(a.securityGroupInstancesTable)
 }
 
@@ -405,6 +433,10 @@ func (a *App) switchToInstanceSecurityGroupsView(instanceId string) {
 	a.setupTableYankFunctionality(a.instanceSecurityGroupsTable, securityGroups)
 	instanceSecurityGroupsListFlex := ui.WrapTableInFlex(a.instanceSecurityGroupsTable)
 	a.pages.AddPage(ui.PageInstanceSecurityGroups, instanceSecurityGroupsListFlex, true, true)
+
+	// Update mode line with shortcuts for instance security groups page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageInstanceSecurityGroups)
+
 	a.tviewApp.SetFocus(a.instanceSecurityGroupsTable)
 }
 
@@ -427,6 +459,10 @@ func (a *App) switchToDnsDomainsListView() {
 	a.setupTableYankFunctionality(a.dnsDomainsTable, a.allDomains)
 	dnsDomainsListFlex := ui.WrapTableInFlex(a.dnsDomainsTable)
 	a.pages.AddPage(ui.PageDnsDomains, dnsDomainsListFlex, true, true)
+
+	// Update mode line with shortcuts for DNS domains page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageDnsDomains)
+
 	a.tviewApp.SetFocus(a.dnsDomainsTable)
 }
 
@@ -443,6 +479,10 @@ func (a *App) switchToDnsRecordsListView(domainName string) {
 	a.setupTableYankFunctionality(a.dnsRecordsTable, records)
 	dnsRecordsListFlex := ui.WrapTableInFlex(a.dnsRecordsTable)
 	a.pages.AddPage(ui.PageDnsRecords, dnsRecordsListFlex, true, true)
+
+	// Update mode line with shortcuts for DNS records page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageDnsRecords)
+
 	a.tviewApp.SetFocus(a.dnsRecordsTable)
 }
 
@@ -491,6 +531,10 @@ func (a *App) switchToSlbListView() {
 		if detailViewWithInstructions.GetItemCount() > 1 {
 			a.slbDetailView = detailViewWithInstructions.GetItem(1).(*tview.TextView)
 		}
+
+		// Update mode line with shortcuts for SLB detail page
+		ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageSlbDetail)
+
 		a.tviewApp.SetFocus(a.slbDetailView)
 	})
 
@@ -498,6 +542,10 @@ func (a *App) switchToSlbListView() {
 	a.setupSlbKeyHandlers(a.slbInstanceTable)
 	slbListFlex := ui.WrapTableInFlex(a.slbInstanceTable)
 	a.pages.AddPage(ui.PageSlbList, slbListFlex, true, true)
+
+	// Update mode line with shortcuts for SLB list page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageSlbList)
+
 	a.tviewApp.SetFocus(a.slbInstanceTable)
 }
 
@@ -551,6 +599,10 @@ func (a *App) switchToSlbListenersView(loadBalancerId string) {
 	a.setupTableYankFunctionality(a.slbListenersTable, detailedListeners)
 	slbListenersListFlex := ui.WrapTableInFlex(a.slbListenersTable)
 	a.pages.AddPage(ui.PageSlbListeners, slbListenersListFlex, true, true)
+
+	// Update mode line with shortcuts for SLB listeners page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageSlbListeners)
+
 	a.tviewApp.SetFocus(a.slbListenersTable)
 }
 
@@ -571,6 +623,10 @@ func (a *App) switchToSlbVServerGroupsView(loadBalancerId string) {
 	a.setupTableYankFunctionality(a.slbVServerGroupsTable, detailedVServerGroups)
 	slbVServerGroupsListFlex := ui.WrapTableInFlex(a.slbVServerGroupsTable)
 	a.pages.AddPage(ui.PageSlbVServerGroups, slbVServerGroupsListFlex, true, true)
+
+	// Update mode line with shortcuts for SLB VServer groups page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageSlbVServerGroups)
+
 	a.tviewApp.SetFocus(a.slbVServerGroupsTable)
 }
 
@@ -588,6 +644,10 @@ func (a *App) switchToSlbVServerGroupBackendServersView(vServerGroupId string) {
 	a.setupTableYankFunctionality(a.slbVServerGroupBackendServersTable, detailedBackendServers)
 	slbVServerGroupBackendServersListFlex := ui.WrapTableInFlex(a.slbVServerGroupBackendServersTable)
 	a.pages.AddPage(ui.PageSlbVServerGroupBackendServers, slbVServerGroupBackendServersListFlex, true, true)
+
+	// Update mode line with shortcuts for SLB backend servers page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageSlbVServerGroupBackendServers)
+
 	a.tviewApp.SetFocus(a.slbVServerGroupBackendServersTable)
 }
 
@@ -610,6 +670,10 @@ func (a *App) switchToOssBucketListView() {
 
 	ossBucketListFlex := ui.WrapTableInFlex(a.ossBucketTable)
 	a.pages.AddPage(ui.PageOssBuckets, ossBucketListFlex, true, true)
+
+	// Update mode line with shortcuts for OSS buckets page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageOssBuckets)
+
 	a.tviewApp.SetFocus(a.ossBucketTable)
 }
 
@@ -642,7 +706,7 @@ func (a *App) loadOssObjectPage() {
 	if a.ossHasNextPage {
 		pageInfo += "+"
 	}
-	ui.UpdateModeLineWithPageInfo(a.modeLine, a.currentProfile, pageInfo)
+	ui.UpdateModeLineWithPageInfoAndShortcuts(a.modeLine, a.currentProfile, ui.PageOssObjects, pageInfo)
 
 	ossObjectView := ui.CreateOssObjectPaginatedView(result.Objects, a.currentBucketName, a.ossCurrentPage, a.ossHasNextPage, hasPrevious)
 
@@ -676,6 +740,10 @@ func (a *App) loadOssObjectPage() {
 				)
 				a.ossDetailView = view
 				a.pages.AddPage("ossObjectDetail", a.ossDetailView, true, true)
+
+				// Update mode line with shortcuts for OSS object detail page
+				ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, "ossObjectDetail")
+
 				a.tviewApp.SetFocus(a.ossDetailView)
 				break
 			}
@@ -1072,6 +1140,10 @@ func (a *App) switchToRdsListView() {
 		if detailViewWithInstructions.GetItemCount() > 1 {
 			a.rdsDetailView = detailViewWithInstructions.GetItem(1).(*tview.TextView)
 		}
+
+		// Update mode line with shortcuts for RDS detail page
+		ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageRdsDetail)
+
 		a.tviewApp.SetFocus(a.rdsDetailView)
 	})
 
@@ -1079,6 +1151,10 @@ func (a *App) switchToRdsListView() {
 	a.setupRdsKeyHandlers(a.rdsInstanceTable)
 	rdsListFlex := ui.WrapTableInFlex(a.rdsInstanceTable)
 	a.pages.AddPage(ui.PageRdsList, rdsListFlex, true, true)
+
+	// Update mode line with shortcuts for RDS list page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageRdsList)
+
 	a.tviewApp.SetFocus(a.rdsInstanceTable)
 }
 
@@ -1160,12 +1236,20 @@ func (a *App) switchToRdsDatabasesView(instanceId string) {
 		)
 		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
 		a.pages.AddPage("rdsDatabaseDetail", detailViewWithInstructions, true, true)
+
+		// Update mode line with shortcuts for RDS database detail page
+		ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, "rdsDatabaseDetail")
+
 		a.tviewApp.SetFocus(detailView)
 	})
 
 	a.setupTableYankFunctionality(a.rdsDatabaseTable, databases)
 	rdsDatabaseListFlex := ui.WrapTableInFlex(a.rdsDatabaseTable)
 	a.pages.AddPage(ui.PageRdsDatabases, rdsDatabaseListFlex, true, true)
+
+	// Update mode line with shortcuts for RDS databases page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageRdsDatabases)
+
 	a.tviewApp.SetFocus(a.rdsDatabaseTable)
 }
 
@@ -1211,12 +1295,20 @@ func (a *App) switchToRdsAccountsView(instanceId string) {
 		)
 		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
 		a.pages.AddPage("rdsAccountDetail", detailViewWithInstructions, true, true)
+
+		// Update mode line with shortcuts for RDS account detail page
+		ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, "rdsAccountDetail")
+
 		a.tviewApp.SetFocus(detailView)
 	})
 
 	a.setupTableYankFunctionality(a.rdsAccountTable, accounts)
 	rdsAccountListFlex := ui.WrapTableInFlex(a.rdsAccountTable)
 	a.pages.AddPage(ui.PageRdsAccounts, rdsAccountListFlex, true, true)
+
+	// Update mode line with shortcuts for RDS accounts page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageRdsAccounts)
+
 	a.tviewApp.SetFocus(a.rdsAccountTable)
 }
 
@@ -1261,6 +1353,10 @@ func (a *App) switchToRedisListView() {
 		)
 		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
 		a.pages.AddPage("redisDetail", detailViewWithInstructions, true, true)
+
+		// Update mode line with shortcuts for Redis detail page
+		ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, "redisDetail")
+
 		a.tviewApp.SetFocus(detailView)
 	})
 
@@ -1269,6 +1365,10 @@ func (a *App) switchToRedisListView() {
 
 	redisListFlex := ui.WrapTableInFlex(a.redisInstanceTable)
 	a.pages.AddPage(ui.PageRedisList, redisListFlex, true, true)
+
+	// Update mode line with shortcuts for Redis list page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageRedisList)
+
 	a.tviewApp.SetFocus(a.redisInstanceTable)
 }
 
@@ -1353,6 +1453,10 @@ func (a *App) switchToRedisAccountsView(instanceId string) {
 		)
 		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
 		a.pages.AddPage("redisAccountDetail", detailViewWithInstructions, true, true)
+
+		// Update mode line with shortcuts for Redis account detail page
+		ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, "redisAccountDetail")
+
 		a.tviewApp.SetFocus(detailView)
 	})
 
@@ -1360,6 +1464,10 @@ func (a *App) switchToRedisAccountsView(instanceId string) {
 
 	redisAccountListFlex := ui.WrapTableInFlex(a.redisAccountTable)
 	a.pages.AddPage(ui.PageRedisAccounts, redisAccountListFlex, true, true)
+
+	// Update mode line with shortcuts for Redis accounts page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageRedisAccounts)
+
 	a.tviewApp.SetFocus(a.redisAccountTable)
 }
 
@@ -1406,6 +1514,10 @@ func (a *App) switchToRocketMQListView() {
 		)
 		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
 		a.pages.AddPage("rocketmqDetail", detailViewWithInstructions, true, true)
+
+		// Update mode line with shortcuts for RocketMQ detail page
+		ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, "rocketmqDetail")
+
 		a.tviewApp.SetFocus(detailView)
 	})
 
@@ -1414,6 +1526,10 @@ func (a *App) switchToRocketMQListView() {
 
 	rocketmqListFlex := ui.WrapTableInFlex(a.rocketmqInstanceTable)
 	a.pages.AddPage(ui.PageRocketMQList, rocketmqListFlex, true, true)
+
+	// Update mode line with shortcuts for RocketMQ list page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageRocketMQList)
+
 	a.tviewApp.SetFocus(a.rocketmqInstanceTable)
 }
 
@@ -1507,6 +1623,10 @@ func (a *App) switchToRocketMQTopicsView(instanceId string) {
 		)
 		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
 		a.pages.AddPage("rocketmqTopicDetail", detailViewWithInstructions, true, true)
+
+		// Update mode line with shortcuts for RocketMQ topic detail page
+		ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, "rocketmqTopicDetail")
+
 		a.tviewApp.SetFocus(detailView)
 	})
 
@@ -1514,6 +1634,10 @@ func (a *App) switchToRocketMQTopicsView(instanceId string) {
 
 	rocketmqTopicsListFlex := ui.WrapTableInFlex(a.rocketmqTopicsTable)
 	a.pages.AddPage(ui.PageRocketMQTopics, rocketmqTopicsListFlex, true, true)
+
+	// Update mode line with shortcuts for RocketMQ topics page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageRocketMQTopics)
+
 	a.tviewApp.SetFocus(a.rocketmqTopicsTable)
 }
 
@@ -1559,6 +1683,10 @@ func (a *App) switchToRocketMQGroupsView(instanceId string) {
 		)
 		detailViewWithInstructions := ui.CreateDetailViewWithInstructions(detailView)
 		a.pages.AddPage("rocketmqGroupDetail", detailViewWithInstructions, true, true)
+
+		// Update mode line with shortcuts for RocketMQ group detail page
+		ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, "rocketmqGroupDetail")
+
 		a.tviewApp.SetFocus(detailView)
 	})
 
@@ -1566,5 +1694,9 @@ func (a *App) switchToRocketMQGroupsView(instanceId string) {
 
 	rocketmqGroupsListFlex := ui.WrapTableInFlex(a.rocketmqGroupsTable)
 	a.pages.AddPage(ui.PageRocketMQGroups, rocketmqGroupsListFlex, true, true)
+
+	// Update mode line with shortcuts for RocketMQ groups page
+	ui.UpdateModeLineWithShortcuts(a.modeLine, a.currentProfile, ui.PageRocketMQGroups)
+
 	a.tviewApp.SetFocus(a.rocketmqGroupsTable)
 }
