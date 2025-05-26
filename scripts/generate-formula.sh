@@ -6,11 +6,11 @@
 set -e
 
 VERSION=${1:-"1.0.0"}
-GITHUB_USER=${2:-"lululau"}
+GITHUB_USER=${2:-"your-username"}
 
-if [ "$GITHUB_USER" = "lululau" ]; then
+if [ "$GITHUB_USER" = "your-username" ]; then
     echo "Usage: $0 <version> <github-username>"
-    echo "Example: $0 1.0.0 lululau"
+    echo "Example: $0 1.0.0 your-username"
     exit 1
 fi
 
