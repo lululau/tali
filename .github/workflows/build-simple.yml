@@ -1,0 +1,185 @@
+name: Build Multi-Platform Binaries (Simple)
+
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+        type: string
+
+jobs:
+  build:
+    name: Build for ${{ matrix.platform }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - platform: macos-intel-x64
+            goos: darwin
+            goarch: amd64
+          - platform: macos-aarch64
+            goos: darwin
+            goarch: arm64
+          - platform: linux-x64
+            goos: linux
+            goarch: amd64
+          - platform: linux-arm64
+            goos: linux
+            goarch: arm64
+          - platform: windows-x64
+            goos: windows
+            goarch: amd64
+            ext: .exe
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          mkdir -p dist
+          OUTPUT_NAME="tali-${{ inputs.version }}-${{ matrix.platform }}${{ matrix.ext }}"
+          go build -ldflags="-s -w -X main.version=${{ inputs.version }}" -o "dist/${OUTPUT_NAME}" ./cmd
+          ls -la dist/
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}
+          path: dist/tali-${{ inputs.version }}-${{ matrix.platform }}${{ matrix.ext }}
+          retention-days: 30
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event.inputs.version != ''
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download macos-intel-x64
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-intel-x64
+          path: release/
+
+      - name: Download macos-aarch64
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-aarch64
+          path: release/
+
+      - name: Download linux-x64
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-x64
+          path: release/
+
+      - name: Download linux-arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-arm64
+          path: release/
+
+      - name: Download windows-x64
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-x64
+          path: release/
+
+      - name: Generate checksums
+        run: |
+          cd release
+          sha256sum * > checksums.txt
+          echo "Generated checksums:"
+          cat checksums.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          name: Release ${{ inputs.version }}
+          body: |
+            ## Tali ${{ inputs.version }}
+            
+            阿里云 TUI 查看器工具
+            
+            ### 支持的平台
+            
+            - **macOS Intel (x64)**: `tali-${{ inputs.version }}-macos-intel-x64`
+            - **macOS Apple Silicon (ARM64)**: `tali-${{ inputs.version }}-macos-aarch64`
+            - **Linux x64**: `tali-${{ inputs.version }}-linux-x64`
+            - **Linux ARM64**: `tali-${{ inputs.version }}-linux-arm64`
+            - **Windows x64**: `tali-${{ inputs.version }}-windows-x64.exe`
+            
+            ### 安装说明
+            
+            1. 下载对应平台的二进制文件
+            2. 重命名为 `tali` (Windows 下为 `tali.exe`)
+            3. 添加执行权限: `chmod +x tali` (Unix 系统)
+            4. 移动到 PATH 目录或直接运行
+            
+            ### 配置
+            
+            创建配置文件 `~/.config/tali.yml` 或按照项目文档进行配置。
+            
+            ### 校验文件完整性
+            
+            使用 `checksums.txt` 文件验证下载的二进制文件:
+            
+            ```bash
+            sha256sum -c checksums.txt
+            ```
+            
+            ---
+            
+            **完整文档**: [README.md](https://github.com/${{ github.repository }}/blob/main/README.md)
+          files: release/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  summary:
+    name: Build Summary
+    needs: build
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Build Summary
+        run: |
+          echo "## 🚀 Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version**: ${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Built Platforms" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Architecture | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | Intel x64 | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | Apple Silicon (ARM64) | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux | x64 | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux | ARM64 | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows | x64 | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📥 Download Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "构建完成的二进制文件可以在 Actions 页面的 Artifacts 部分下载。" >> $GITHUB_STEP_SUMMARY 
