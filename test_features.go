@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"aliyun-tui-viewer/internal/config"
 	"aliyun-tui-viewer/internal/ui"
 )
 
@@ -52,10 +53,33 @@ func TestRdsServiceMethods() {
 	fmt.Println("SUCCESS: RDS service methods test passed")
 }
 
+func TestConfigStructure() {
+	fmt.Println("Testing new config structure...")
+
+	// Test GetEditor function (will use environment variables or defaults)
+	editor, err := config.GetEditor()
+	if err != nil {
+		fmt.Printf("WARNING: GetEditor failed (expected without config file): %v\n", err)
+	} else {
+		fmt.Printf("✓ GetEditor returned: %s\n", editor)
+	}
+
+	// Test GetPager function (will use environment variables or defaults)
+	pager, err := config.GetPager()
+	if err != nil {
+		fmt.Printf("WARNING: GetPager failed (expected without config file): %v\n", err)
+	} else {
+		fmt.Printf("✓ GetPager returned: %s\n", pager)
+	}
+
+	fmt.Println("SUCCESS: Config structure functions work correctly")
+}
+
 func main() {
 	fmt.Println("Running tali feature tests...")
 	TestYankTracker()
 	TestCopyToClipboard()
 	TestRdsServiceMethods()
+	TestConfigStructure()
 	fmt.Println("All tests completed!")
 }

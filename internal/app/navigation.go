@@ -225,9 +225,15 @@ func (a *App) switchToEcsListView() {
 				}
 			},
 			func() {
-				err := ui.OpenInNvimWithSuspend(selectedInstance, a.tviewApp)
+				err := ui.OpenInEditor(selectedInstance, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
+				}
+			},
+			func() {
+				err := ui.OpenInPager(selectedInstance, a.tviewApp)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to open pager: %v", err))
 				}
 			},
 		)
@@ -387,9 +393,15 @@ func (a *App) switchToSecurityGroupInstancesView(securityGroupId string) {
 				}
 			},
 			func() {
-				err := ui.OpenInNvimWithSuspend(selectedInstance, a.tviewApp)
+				err := ui.OpenInEditor(selectedInstance, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
+				}
+			},
+			func() {
+				err := ui.OpenInPager(selectedInstance, a.tviewApp)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to open pager: %v", err))
 				}
 			},
 		)
@@ -520,9 +532,15 @@ func (a *App) switchToSlbListView() {
 				}
 			},
 			func() {
-				err := ui.OpenInNvimWithSuspend(selectedSlb, a.tviewApp)
+				err := ui.OpenInEditor(selectedSlb, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
+				}
+			},
+			func() {
+				err := ui.OpenInPager(selectedSlb, a.tviewApp)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to open pager: %v", err))
 				}
 			},
 		)
@@ -732,9 +750,15 @@ func (a *App) loadOssObjectPage() {
 						}
 					},
 					func() {
-						err := ui.OpenInNvimWithSuspend(obj, a.tviewApp)
+						err := ui.OpenInEditor(obj, a.tviewApp)
 						if err != nil {
 							a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
+						}
+					},
+					func() {
+						err := ui.OpenInPager(obj, a.tviewApp)
+						if err != nil {
+							a.showErrorModal(fmt.Sprintf("Failed to open pager: %v", err))
 						}
 					},
 				)
@@ -1129,9 +1153,15 @@ func (a *App) switchToRdsListView() {
 				}
 			},
 			func() {
-				err := ui.OpenInNvimWithSuspend(selectedInstance, a.tviewApp)
+				err := ui.OpenInEditor(selectedInstance, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Edit failed: %v", err))
+				}
+			},
+			func() {
+				err := ui.OpenInPager(selectedInstance, a.tviewApp)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to open pager: %v", err))
 				}
 			},
 		)
@@ -1228,9 +1258,15 @@ func (a *App) switchToRdsDatabasesView(instanceId string) {
 				}
 			},
 			func() {
-				err := ui.OpenInNvimWithSuspend(selectedDatabase, a.tviewApp)
+				err := ui.OpenInEditor(selectedDatabase, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Edit failed: %v", err))
+				}
+			},
+			func() {
+				err := ui.OpenInPager(selectedDatabase, a.tviewApp)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to open pager: %v", err))
 				}
 			},
 		)
@@ -1287,9 +1323,15 @@ func (a *App) switchToRdsAccountsView(instanceId string) {
 				}
 			},
 			func() {
-				err := ui.OpenInNvimWithSuspend(selectedAccount, a.tviewApp)
+				err := ui.OpenInEditor(selectedAccount, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Edit failed: %v", err))
+				}
+			},
+			func() {
+				err := ui.OpenInPager(selectedAccount, a.tviewApp)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to open pager: %v", err))
 				}
 			},
 		)
@@ -1345,9 +1387,15 @@ func (a *App) switchToRedisListView() {
 				}
 			},
 			func() {
-				err := ui.OpenInNvimWithSuspend(selectedInstance, a.tviewApp)
+				err := ui.OpenInEditor(selectedInstance, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
+				}
+			},
+			func() {
+				err := ui.OpenInPager(selectedInstance, a.tviewApp)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to open pager: %v", err))
 				}
 			},
 		)
@@ -1445,9 +1493,15 @@ func (a *App) switchToRedisAccountsView(instanceId string) {
 				}
 			},
 			func() {
-				err := ui.OpenInNvimWithSuspend(selectedAccount, a.tviewApp)
+				err := ui.OpenInEditor(selectedAccount, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
+				}
+			},
+			func() {
+				err := ui.OpenInPager(selectedAccount, a.tviewApp)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to open pager: %v", err))
 				}
 			},
 		)
@@ -1506,9 +1560,15 @@ func (a *App) switchToRocketMQListView() {
 				}
 			},
 			func() {
-				err := ui.OpenInNvimWithSuspend(selectedInstance, a.tviewApp)
+				err := ui.OpenInEditor(selectedInstance, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
+				}
+			},
+			func() {
+				err := ui.OpenInPager(selectedInstance, a.tviewApp)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to open pager: %v", err))
 				}
 			},
 		)
@@ -1615,9 +1675,15 @@ func (a *App) switchToRocketMQTopicsView(instanceId string) {
 				}
 			},
 			func() {
-				err := ui.OpenInNvimWithSuspend(selectedTopic, a.tviewApp)
+				err := ui.OpenInEditor(selectedTopic, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
+				}
+			},
+			func() {
+				err := ui.OpenInPager(selectedTopic, a.tviewApp)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to open pager: %v", err))
 				}
 			},
 		)
@@ -1675,9 +1741,15 @@ func (a *App) switchToRocketMQGroupsView(instanceId string) {
 				}
 			},
 			func() {
-				err := ui.OpenInNvimWithSuspend(selectedGroup, a.tviewApp)
+				err := ui.OpenInEditor(selectedGroup, a.tviewApp)
 				if err != nil {
 					a.showErrorModal(fmt.Sprintf("Failed to edit: %v", err))
+				}
+			},
+			func() {
+				err := ui.OpenInPager(selectedGroup, a.tviewApp)
+				if err != nil {
+					a.showErrorModal(fmt.Sprintf("Failed to open pager: %v", err))
 				}
 			},
 		)

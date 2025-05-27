@@ -23,6 +23,8 @@ type ConfigProfile struct {
 type AliyunConfig struct {
 	Current  string          `json:"current"`
 	Profiles []ConfigProfile `json:"profiles"`
+	Editor   string          `json:"editor,omitempty"` // Global editor command
+	Pager    string          `json:"pager,omitempty"`  // Global pager command
 }
 
 // Config holds the application configuration
@@ -31,6 +33,8 @@ type Config struct {
 	AccessKeySecret string
 	RegionID        string
 	OssEndpoint     string
+	Editor          string
+	Pager           string
 }
 
 // LoadAliyunConfig loads configuration from ~/.aliyun/config.json
@@ -107,6 +111,8 @@ func LoadAliyunConfig() (*Config, error) {
 		AccessKeySecret: activeProfile.AccessKeySecret,
 		RegionID:        activeProfile.RegionID,
 		OssEndpoint:     ossEndpoint,
+		Editor:          config.Editor,
+		Pager:           config.Pager,
 	}, nil
 }
 
@@ -225,4 +231,58 @@ func SwitchProfile(profileName string) error {
 	}
 
 	return nil
+}
+
+// GetEditor returns the editor command to use, following the priority:
+// 1. Config file "editor" field
+// 2. VISUAL environment variable
+// 3. EDITOR environment variable
+// 4. Default to "vim"
+func GetEditor() (string, error) {
+	config, err := LoadAliyunConfig()
+	if err != nil {
+		return "", err
+	}
+
+	// First check config file
+	if config.Editor != "" {
+		return config.Editor, nil
+	}
+
+	// Then check VISUAL environment variable
+	if visual := os.Getenv("VISUAL"); visual != "" {
+		return visual, nil
+	}
+
+	// Then check EDITOR environment variable
+	if editor := os.Getenv("EDITOR"); editor != "" {
+		return editor, nil
+	}
+
+	// Default to vim
+	return "vim", nil
+}
+
+// GetPager returns the pager command to use, following the priority:
+// 1. Config file "pager" field
+// 2. PAGER environment variable
+// 3. Default to "less"
+func GetPager() (string, error) {
+	config, err := LoadAliyunConfig()
+	if err != nil {
+		return "", err
+	}
+
+	// First check config file
+	if config.Pager != "" {
+		return config.Pager, nil
+	}
+
+	// Then check PAGER environment variable
+	if pager := os.Getenv("PAGER"); pager != "" {
+		return pager, nil
+	}
+
+	// Default to less
+	return "less", nil
 }

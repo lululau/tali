@@ -45,7 +45,7 @@ func CreateInteractiveJSONDetailView(title string, data interface{}, onCopy func
 }
 
 // CreateInteractiveJSONDetailViewWithSearch creates a JSON detail view with copy, edit and search functionality
-func CreateInteractiveJSONDetailViewWithSearch(title string, data interface{}, appRef AppControlInterface, onCopy func(), onEdit func()) (*tview.TextView, *VimSearchHandler) {
+func CreateInteractiveJSONDetailViewWithSearch(title string, data interface{}, appRef AppControlInterface, onCopy func(), onEdit func(), onPager func()) (*tview.TextView, *VimSearchHandler) {
 	textView := CreateInteractiveJSONDetailView(title, data, onCopy, onEdit)
 
 	jsonDataBytes, _ := json.MarshalIndent(data, "", "  ")
@@ -85,6 +85,11 @@ func CreateInteractiveJSONDetailViewWithSearch(title string, data interface{}, a
 		case 'e':
 			if onEdit != nil {
 				onEdit()
+			}
+			return nil
+		case 'v':
+			if onPager != nil {
+				onPager()
 			}
 			return nil
 		case '/':
@@ -248,7 +253,7 @@ func CreateDetailViewWithInstructions(detailView *tview.TextView) *tview.Flex {
 
 	// Instructions
 	instructions := tview.NewTextView().
-		SetText("Press 'Esc' or 'q' to go back, 'Q' to quit, 'yy' to copy JSON, 'e' to edit in nvim, '/' to search, 'n/p' for next/prev").
+		SetText("Press 'Esc' or 'q' to go back, 'Q' to quit, 'yy' to copy JSON, 'e' to edit, 'v' to view in pager, '/' to search, 'n/p' for next/prev").
 		SetTextAlign(tview.AlignCenter).
 		SetDynamicColors(true).
 		SetBackgroundColor(tcell.ColorReset)
@@ -310,11 +315,11 @@ func GetPageShortcuts(pageName string) string {
 
 		// ECS related pages
 		PageEcsList:   "j/k: Navigate | Enter: Details | /: Search | n/N: Next/Prev search | yy: Copy | q: Back | O: Profile",
-		PageEcsDetail: "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
+		PageEcsDetail: "q/Esc: Back | yy: Copy JSON | e: Edit | v: View in pager | /: Search | n/N: Next/Prev | Q: Quit",
 
 		// Security Groups related pages
 		PageSecurityGroups:         "j/k: Navigate | Enter: Rules | s: Instances | /: Search | yy: Copy | q: Back",
-		PageSecurityGroupDetail:    "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
+		PageSecurityGroupDetail:    "q/Esc: Back | yy: Copy JSON | e: Edit | v: View in pager | /: Search | n/N: Next/Prev | Q: Quit",
 		PageSecurityGroupRules:     "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
 		PageSecurityGroupInstances: "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
 		PageInstanceSecurityGroups: "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
@@ -325,7 +330,7 @@ func GetPageShortcuts(pageName string) string {
 
 		// SLB related pages
 		PageSlbList:                       "j/k: Navigate | Enter: Details | l: Listeners | v: VServer Groups | /: Search | yy: Copy | q: Back",
-		PageSlbDetail:                     "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
+		PageSlbDetail:                     "q/Esc: Back | yy: Copy JSON | e: Edit | v: View in pager | /: Search | n/N: Next/Prev | Q: Quit",
 		PageSlbListeners:                  "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
 		PageSlbVServerGroups:              "j/k: Navigate | Enter: Backend Servers | /: Search | yy: Copy | q: Back | Q: Quit",
 		PageSlbVServerGroupBackendServers: "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
@@ -336,7 +341,7 @@ func GetPageShortcuts(pageName string) string {
 
 		// RDS related pages
 		PageRdsList:      "j/k: Navigate | Enter: Details | D: Databases | A: Accounts | /: Search | yy: Copy | q: Back",
-		PageRdsDetail:    "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
+		PageRdsDetail:    "q/Esc: Back | yy: Copy JSON | e: Edit | v: View in pager | /: Search | n/N: Next/Prev | Q: Quit",
 		PageRdsDatabases: "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
 		PageRdsAccounts:  "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
 
@@ -350,14 +355,14 @@ func GetPageShortcuts(pageName string) string {
 		PageRocketMQGroups: "j/k: Navigate | Enter: Details | /: Search | yy: Copy | q: Back | Q: Quit",
 
 		// Detail pages (using string literals for non-constant page names)
-		"ossObjectDetail":     "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
-		"rdsDatabaseDetail":   "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
-		"rdsAccountDetail":    "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
-		"redisDetail":         "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
-		"redisAccountDetail":  "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
-		"rocketmqDetail":      "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
-		"rocketmqTopicDetail": "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
-		"rocketmqGroupDetail": "q/Esc: Back | yy: Copy JSON | e: Edit in nvim | /: Search | n/N: Next/Prev | Q: Quit",
+		"ossObjectDetail":     "q/Esc: Back | yy: Copy JSON | e: Edit | v: View in pager | /: Search | n/N: Next/Prev | Q: Quit",
+		"rdsDatabaseDetail":   "q/Esc: Back | yy: Copy JSON | e: Edit | v: View in pager | /: Search | n/N: Next/Prev | Q: Quit",
+		"rdsAccountDetail":    "q/Esc: Back | yy: Copy JSON | e: Edit | v: View in pager | /: Search | n/N: Next/Prev | Q: Quit",
+		"redisDetail":         "q/Esc: Back | yy: Copy JSON | e: Edit | v: View in pager | /: Search | n/N: Next/Prev | Q: Quit",
+		"redisAccountDetail":  "q/Esc: Back | yy: Copy JSON | e: Edit | v: View in pager | /: Search | n/N: Next/Prev | Q: Quit",
+		"rocketmqDetail":      "q/Esc: Back | yy: Copy JSON | e: Edit | v: View in pager | /: Search | n/N: Next/Prev | Q: Quit",
+		"rocketmqTopicDetail": "q/Esc: Back | yy: Copy JSON | e: Edit | v: View in pager | /: Search | n/N: Next/Prev | Q: Quit",
+		"rocketmqGroupDetail": "q/Esc: Back | yy: Copy JSON | e: Edit | v: View in pager | /: Search | n/N: Next/Prev | Q: Quit",
 	}
 
 	if shortcut, exists := shortcuts[pageName]; exists {
