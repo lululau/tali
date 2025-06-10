@@ -227,7 +227,7 @@ The application uses vim-style keyboard navigation with contextual shortcuts dis
 ### Service Details
 
 #### ECS Instances
-- Lists all ECS instances with ID, status, zone, CPU/RAM configuration, private IP, public IP, and name
+- Lists all ECS instances with ID, status, zone, CPU/RAM configuration, private IP, public IP, name, and expired time
 - Press `g` on any instance to view its security groups
 - Select an instance to view complete JSON details including:
   - Instance specifications and configuration

@@ -25,7 +25,7 @@ export ALIBABA_CLOUD_OSS_ENDPOINT="oss-cn-hangzhou.aliyuncs.com"
 - 使用方向键或 `j/k` 导航
 
 ### 列表页面
-- **ECS 实例列表**: 显示实例 ID、状态、可用区、CPU/RAM 配置、私有 IP、公网 IP、名称
+- **ECS 实例列表**: 显示实例 ID、状态、可用区、CPU/RAM 配置、私有 IP、公网 IP、名称、过期时间
 - **DNS 域名列表**: 显示域名、记录数量、版本代码
 - **SLB 实例列表**: 显示 SLB ID、名称、IP 地址、类型、状态
 - **OSS 存储桶列表**: 显示存储桶名称、位置、创建日期、存储类型

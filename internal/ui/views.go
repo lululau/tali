@@ -19,7 +19,7 @@ func CreateEcsListView(instances []ecs.Instance) *tview.Table {
 		SetBorders(true).
 		SetSelectable(true, false)
 	table = SetupTableWithFixedWidth(table)
-	headers := []string{"Instance ID", "Status", "Zone", "CPU/RAM", "Private IP", "Public IP", "Name"}
+	headers := []string{"Instance ID", "Status", "Zone", "CPU/RAM", "Private IP", "Public IP", "Name", "Expired Time"}
 	CreateTableHeaders(table, headers)
 
 	if len(instances) == 0 {
@@ -45,6 +45,12 @@ func CreateEcsListView(instances []ecs.Instance) *tview.Table {
 			// CPU/RAM configuration
 			cpuRam := fmt.Sprintf("%dC/%dG", instance.Cpu, instance.Memory/1024)
 
+			// Expired Time
+			expiredTime := "N/A"
+			if instance.ExpiredTime != "" {
+				expiredTime = instance.ExpiredTime
+			}
+
 			table.SetCell(r+1, 0, tview.NewTableCell(instance.InstanceId).SetTextColor(tcell.ColorWhite).SetReference(instance.InstanceId).SetExpansion(1))
 			table.SetCell(r+1, 1, tview.NewTableCell(instance.Status).SetTextColor(tcell.ColorWhite).SetExpansion(1))
 			table.SetCell(r+1, 2, tview.NewTableCell(instance.ZoneId).SetTextColor(tcell.ColorWhite).SetExpansion(1))
@@ -52,6 +58,7 @@ func CreateEcsListView(instances []ecs.Instance) *tview.Table {
 			table.SetCell(r+1, 4, tview.NewTableCell(privateIP).SetTextColor(tcell.ColorWhite).SetExpansion(1))
 			table.SetCell(r+1, 5, tview.NewTableCell(publicIP).SetTextColor(tcell.ColorWhite).SetExpansion(1))
 			table.SetCell(r+1, 6, tview.NewTableCell(instance.InstanceName).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 7, tview.NewTableCell(expiredTime).SetTextColor(tcell.ColorWhite).SetExpansion(1))
 		}
 	}
 	return table
@@ -158,7 +165,7 @@ func CreateSecurityGroupInstancesView(instances []ecs.Instance, securityGroupId 
 		SetBorders(true).
 		SetSelectable(true, false)
 	table = SetupTableWithFixedWidth(table)
-	headers := []string{"Instance ID", "Status", "Zone", "CPU/RAM", "Private IP", "Public IP", "Name"}
+	headers := []string{"Instance ID", "Status", "Zone", "CPU/RAM", "Private IP", "Public IP", "Name", "Expired Time"}
 	CreateTableHeaders(table, headers)
 
 	if len(instances) == 0 {
@@ -184,6 +191,12 @@ func CreateSecurityGroupInstancesView(instances []ecs.Instance, securityGroupId 
 			// CPU/RAM configuration
 			cpuRam := fmt.Sprintf("%dC/%dG", instance.Cpu, instance.Memory/1024)
 
+			// Expired Time
+			expiredTime := "N/A"
+			if instance.ExpiredTime != "" {
+				expiredTime = instance.ExpiredTime
+			}
+
 			table.SetCell(r+1, 0, tview.NewTableCell(instance.InstanceId).SetTextColor(tcell.ColorWhite).SetReference(instance.InstanceId).SetExpansion(1))
 			table.SetCell(r+1, 1, tview.NewTableCell(instance.Status).SetTextColor(tcell.ColorWhite).SetExpansion(1))
 			table.SetCell(r+1, 2, tview.NewTableCell(instance.ZoneId).SetTextColor(tcell.ColorWhite).SetExpansion(1))
@@ -191,6 +204,7 @@ func CreateSecurityGroupInstancesView(instances []ecs.Instance, securityGroupId 
 			table.SetCell(r+1, 4, tview.NewTableCell(privateIP).SetTextColor(tcell.ColorWhite).SetExpansion(1))
 			table.SetCell(r+1, 5, tview.NewTableCell(publicIP).SetTextColor(tcell.ColorWhite).SetExpansion(1))
 			table.SetCell(r+1, 6, tview.NewTableCell(instance.InstanceName).SetTextColor(tcell.ColorWhite).SetExpansion(1))
+			table.SetCell(r+1, 7, tview.NewTableCell(expiredTime).SetTextColor(tcell.ColorWhite).SetExpansion(1))
 		}
 	}
 	table.SetTitle(fmt.Sprintf("Instances using Security Group: %s", securityGroupId)).SetBorder(true)
