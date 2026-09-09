@@ -297,33 +297,8 @@ const (
 	LocaleZhCN = "zh_CN"
 )
 
-// GetLocale returns the locale to use, following the priority:
-// 1. Config file "locale" field
-// 2. LC_ALL environment variable
-// 3. LC_MESSAGES environment variable
-// 4. LANG environment variable
-// 5. Default to "en_US"
-// Only zh_CN and en_US are supported, others default to en_US
+// GetLocale returns the locale to use. Always returns English ("en_US").
 func GetLocale() string {
-	// First try config file
-	config, err := LoadAliyunConfig()
-	if err == nil && config.Locale != "" {
-		if normalizedLocale := normalizeLocale(config.Locale); normalizedLocale != "" {
-			return normalizedLocale
-		}
-	}
-
-	// Then check environment variables in order
-	envVars := []string{"LC_ALL", "LC_MESSAGES", "LANG"}
-	for _, env := range envVars {
-		if value := os.Getenv(env); value != "" {
-			if normalizedLocale := normalizeLocale(value); normalizedLocale != "" {
-				return normalizedLocale
-			}
-		}
-	}
-
-	// Default to English
 	return LocaleEnUS
 }
 
